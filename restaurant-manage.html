@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการร้านอาหาร - Appretite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inria+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background-color: #84a57f;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Inria Serif', serif;
+        }
+
+        .card {
+            background: white;
+            padding: 40px;
+            border-radius: 25px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+            position: relative;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 25px;
+            cursor: pointer;
+            font-size: 1.5rem;
+            text-decoration: none;
+            color: #333;
+        }
+
+        h2 {
+            text-align: center;
+            font-weight: 400;
+            margin-bottom: 25px;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-family: 'Inria Serif', serif;
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: #333;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .info-box {
+            text-align: center;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px dashed #ccc;
+            margin-bottom: 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <a href="index.html" class="back-btn">←</a>
+        <div id="no-restaurant">
+            <h2>สร้างร้านของคุณ</h2>
+            <input type="text" id="shop-name" placeholder="ชื่อร้านอาหาร">
+            <input type="tel" id="shop-phone" placeholder="เบอร์โทรศัพท์ติดต่อร้าน">
+            <input type="text" id="promptpay" placeholder="เลขพร้อมเพย์ (สำหรับรับเงิน)">
+            <textarea id="shop-address" placeholder="ที่อยู่ร้าน" rows="3"></textarea>
+            <input type="number" id="lead-time" placeholder="ต้องสั่งล่วงหน้า (ชั่วโมง)">
+            <button class="btn-main" onclick="createRestaurant()">ยืนยันสร้างร้าน</button>
+        </div>
+
+        <div id="has-restaurant" class="hidden">
+            <h2>เข้าสู่ระบบจัดการร้าน</h2>
+            <div class="info-box">
+                <h3 id="display-name" style="color: #84a57f; margin:0;"></h3>
+                <p>ยินดีต้อนรับเจ้าของร้าน</p>
+            </div>
+            <button class="btn-main" onclick="location.href='restaurant-dashboard.html'">
+                เข้าสู่หน้า Dashboard จัดการเมนูและออเดอร์
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://qjkbtcqjmwwwtqdhgmyu.supabase.co', 'sb_publishable_DnNEGxHkiaWXHzYNGQ0luw_oVVR_Bl0');
+
+        // ตรวจสอบข้อมูลร้านค้าของผู้ใช้งานคนนี้
+        async function checkRestaurant() {
+            // ดึงข้อมูล Session ปัจจุบันเพื่อเอา User ID ของเจ้าของร้าน
+            const { data: { session } } = await supabaseClient.auth.getSession();
+
+            // ดึงข้อมูลจากตาราง 'restaurants' โดยหาแถวที่ owner_id ตรงกับคนที่ Login อยู่
+            const { data: res } = await supabaseClient.from('restaurants').select('*').eq('owner_id', session.user.id).single();
+            if (res) {
+                // หากพบข้อมูลร้าน (มีร้านแล้ว): ซ่อนส่วนหน้าจอสำหรับสมัครร้านใหม่
+                document.getElementById('no-restaurant').classList.add('hidden');
+                // แสดงส่วนหน้าจอจัดการร้านค้า (Dashboard)
+                document.getElementById('has-restaurant').classList.remove('hidden');
+
+                // นำข้อมูลจากฐานข้อมูลมาแสดงผลในหน้าเว็บ
+                document.getElementById('display-name').innerText = res.name;
+                document.getElementById('display-promptpay').innerText = "พร้อมเพย์: " + res.promptpay_id;
+                document.getElementById('display-phone').innerText = "📞 " + res.phone_number;
+                document.getElementById('display-address').innerText = res.address;
+            }
+        }
+
+        // ฟังก์ชันการลงทะเบียนสร้างร้านค้าใหม่ 
+        async function createRestaurant() {
+            // ดึง Session เพื่อระบุว่าใครจะเป็นเจ้าของร้าน
+            const { data: { session } } = await supabaseClient.auth.getSession();
+
+            // เตรียมข้อมูล (Payload) จากฟอร์มที่กรอกบนหน้าเว็บเพื่อส่งเข้าฐานข้อมูล
+            const payload = {
+                owner_id: session.user.id, // กำหนด Foreign Key เชื่อมกับ Profiles
+                name: document.getElementById('shop-name').value,
+                phone_number: document.getElementById('shop-phone').value,
+                promptpay_id: document.getElementById('promptpay').value,
+                address: document.getElementById('shop-address').value,
+
+                // แปลงเวลาเตรียมอาหารให้เป็นตัวเลข (Integer) ถ้าว่างให้เป็น 0
+                lead_time_hours: parseInt(document.getElementById('lead-time').value) || 0
+            };
+
+            // บันทึกข้อมูลลงตาราง 'restaurants'
+            const { error } = await supabaseClient.from('restaurants').insert([payload]);
+            // หากบันทึกไม่สำเร็จ (เช่น ชื่อซ้ำ หรือเน็ตหลุด) ให้แจ้งเตือน Error
+            // หากสำเร็จ ให้ทำการรีเฟรชหน้าจอเพื่อไปที่หน้า Dashboard ของร้านทันที
+            if (error) alert(error.message); else location.reload();
+        }
+
+        // เรียกใช้ฟังก์ชันตรวจสอบข้อมูลร้านค้าทันทีที่สคริปต์เริ่มทำงาน
+        checkRestaurant();
+    </script>
+</body>
+
+</html>

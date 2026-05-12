@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ออเดอร์ของฉัน - Appretite</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: #f8faf8;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .btn-back {
+            text-decoration: none;
+            color: #84a57f;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .order-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eef2ee;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f0f4f0;
+            padding-bottom: 15px;
+        }
+
+        .res-info b {
+            font-size: 1.3rem;
+            color: #2c3e50;
+        }
+
+        .order-date {
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        /* Badge สถานะ */
+        .status {
+            padding: 6px 14px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff7e6;
+            color: #fa8c16;
+            border: 1px solid #ffd591;
+        }
+
+        .status-confirmed {
+            background: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+
+        .status-rejected {
+            background: #fff1f0;
+            color: #f5222d;
+            border: 1px solid #ffa39e;
+        }
+
+        /* ตารางรายการอาหาร */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th {
+            text-align: left;
+            color: #777;
+            font-weight: normal;
+            font-size: 0.9rem;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        td {
+            padding: 12px 0;
+            border-bottom: 1px solid #fafafa;
+        }
+
+        .item-name {
+            font-weight: 500;
+        }
+
+        .item-price-detail {
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .footer-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .total-label {
+            font-size: 1rem;
+            margin-right: 15px;
+            color: #666;
+        }
+
+        .total-amount {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        /* ส่วนชำระเงิน */
+        .payment-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f0f7ff;
+            border-radius: 12px;
+            border: 1px solid #bae7ff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .payment-text b {
+            color: #0050b3;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .btn-pay {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-pay:hover {
+            background: #096dd9;
+            transform: translateY(-2px);
+        }
+
+        .reject-reason {
+            margin-top: 15px;
+            padding: 15px;
+            background: #fff1f0;
+            border-radius: 10px;
+            color: #a8071a;
+            font-size: 0.95rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            margin-top: 100px;
+            color: #aaa;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <a href="customer-order.html" class="btn-back">← กลับไปที่ร้านอาหาร</a>
+            <h2>ออเดอร์ของฉัน</h2>
+        </header>
+
+        <div id="order-list">กำลังโหลดข้อมูล...</div>
+    </div>
+
+    <script>
+
+        const SUPABASE_URL = 'https://qjkbtcqjmwwwtqdhgmyu.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_DnNEGxHkiaWXHzYNGQ0luw_oVVR_Bl0';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // การโหลดรายการคำสั่งซื้อของฉัน
+        async function loadMyOrders() {
+            const listDiv = document.getElementById('order-list');
+            if (!listDiv) return;
+
+            try {
+                // ตรวจสอบ Session เพื่อระบุตัวตนลูกค้าที่ล็อกอินอยู่
+                const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+                if (sessionError) throw sessionError;
+                if (!session) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // ดึงข้อมูลออเดอร์แบบสัมพันธ์ลึก (Complex Data Retrieval)
+                // ดึงข้อมูลจากตาราง Orders ผสมกับตารางร้านค้า, รายการอาหาร, และข้อมูลไรเดอร์
+                const { data: orders, error } = await supabaseClient
+                    .from('orders')
+                    .select(`
+                        *,
+                        restaurants(name, promptpay_id),
+                        order_items(quantity, menus(name, price)),
+                        rider_info:riders!rider_id(
+                            vehicle_plate, 
+                            vehicle_model,
+                            profiles(full_name, phone_number)
+                        )
+                    `)
+                    .eq('customer_id', session.user.id) // กรองเฉพาะของลูกค้าคนนี้
+                    .order('created_at', { ascending: false }); // เรียงล่าสุดขึ้นก่อน
+
+                // จัดการแสดงผลกรณีไม่พบประวัติการสั่งซื้อ
+                if (!orders || orders.length === 0) {
+                    listDiv.innerHTML = `
+                <div class="empty-state" style="text-align: center; padding: 40px; color: #888;">
+                    <i style="font-size: 48px; display: block; margin-bottom: 10px;">📦</i>
+                    ยังไม่มีประวัติการสั่งอาหารของคุณ
+                </div>`;
+                    return;
+                }
+
+                // กรณีมีข้อมูล - สร้างรายการ HTML (ใช้ map ภายใน try)
+                listDiv.innerHTML = orders.map(order => {
+                    let totalOrderPrice = 0;
+
+                    // คำนวณยอดรวมและสร้างแถวรายการอาหารในแต่ละออเดอร์
+                    const itemsRows = order.order_items.map(item => {
+                        const price = item.menus?.price || 0;
+                        const subtotal = price * item.quantity;
+                        totalOrderPrice += subtotal; // สะสมยอดรวมสุทธิ
+                        return `
+                    <tr>
+                        <td style="padding: 8px 0;">
+                            <div style="font-weight: bold; color: #1e293b;">${item.menus?.name || 'รายการอาหาร'}</div>
+                            <div style="font-size: 0.8rem; color: #64748b;">ราคาชิ้นละ ${price}.-</div>
+                        </td>
+                        <td style="text-align: center;">x ${item.quantity}</td>
+                        <td style="text-align: right; font-weight: bold;">${subtotal.toLocaleString()}.-</td>
+                    </tr>
+                `;
+                    }).join('');
+
+                    // ตรรกะการกำหนดข้อความและสีของสถานะออเดอร์
+                    let statusClass = 'status-pending';
+                    let statusText = '⏳ รอร้านค้ายืนยัน';
+                    const s = order.status;
+
+                    if (s === 'confirmed') { statusClass = 'status-confirmed'; statusText = '✅ ร้านยืนยันแล้ว (รอแนบสลิป)'; }
+                    else if (s === 'paid') { statusClass = 'status-paid'; statusText = '💰 จ่ายเงินแล้ว (รอร้านตรวจสอบ)'; }
+                    else if (s === 'rider_accepted') { statusClass = 'status-paid'; statusText = '🛵 ไรเดอร์รับงานแล้ว'; }
+                    else if (s === 'picked_up') { statusClass = 'status-paid'; statusText = '🚀 ไรเดอร์กำลังนำส่ง'; }
+                    else if (s === 'completed') { statusClass = 'status-confirmed'; statusText = '🍽️ จัดส่งเรียบร้อยแล้ว'; }
+                    else if (s === 'rejected') { statusClass = 'status-rejected'; statusText = '❌ ออเดอร์ถูกยกเลิก'; }
+
+                    // การจัดการแสดงผลข้อมูลไรเดอร์
+                    let riderHtml = "";
+
+                    if (order.rider_info) {
+                        const ri = order.rider_info;
+                        const rp = ri.profiles || {}; // ข้อมูลชื่อและเบอร์อยู่ใน profiles ที่ซ้อนข้างใน
+
+                        riderHtml = `
+                        <div style="margin-top: 15px; padding: 12px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+                            <div style="color: #166534; font-weight: bold; font-size: 0.85rem; margin-bottom: 5px;">🛵 ข้อมูลไรเดอร์:</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: bold; color: #1e293b;">คุณ ${rp.full_name || 'ไรเดอร์'}</div>
+                                    <div style="font-size: 0.85rem; color: #64748b;">โทร: ${rp.phone_number || '-'}</div>
+                                    <div style="font-size: 0.8rem; color: #166534; margin-top: 2px;">
+                                        🚗 ${ri.vehicle_model || ''} [${ri.vehicle_plate || ''}]
+                                    </div>
+                                </div>
+                                ${rp.phone_number ? `<a href="tel:${rp.phone_number}" style="background: #22c55e; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: bold;">📞 โทรหา</a>` : ''}
+                            </div>
+                        </div>`;
+                    } else if (order.status === 'paid') {
+                        riderHtml = `<div style="margin-top: 15px; padding: 10px; background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; text-align: center; color: #64748b; font-size: 0.85rem;">⌛ ชำระเงินแล้ว กำลังจัดหาไรเดอร์ให้คุณ...</div>`;
+                    }
+                    // 4.4 ส่งคืน HTML Card
+                    return `
+                <div class="order-card" style="margin-bottom: 25px; border: 1px solid #e2e8f0; padding: 20px; border-radius: 15px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                        <div>
+                            <b style="font-size: 1.1rem; color: #1e293b;">ร้าน: ${order.restaurants?.name || 'ไม่ทราบชื่อร้าน'}</b>
+                            <div style="font-size: 0.8rem; color: #888;">${new Date(order.created_at).toLocaleString('th-TH')}</div>
+                        </div>
+                        <span class="status ${statusClass}" style="padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; background:#f1f5f9;">${statusText}</span>
+                    </div>
+                    
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                        <tbody>${itemsRows}</tbody>
+                    </table>
+
+                    <div style="display: flex; justify-content: space-between; border-top: 1px solid #eee; padding-top: 10px; font-size: 1.1rem;">
+                        <span style="color: #64748b;">ยอดสุทธิ</span>
+                        <span style="font-weight: bold; color: #2563eb;">${totalOrderPrice.toLocaleString()} บาท</span>
+                    </div>
+
+                    ${order.status === 'confirmed' ? `
+                        <div style="background: #fff9db; padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px solid #fab005;">
+                            <b style="color: #856404; display: block; margin-bottom: 5px;">🎉 ร้านค้าตอบรับออเดอร์แล้ว!</b>
+                            <div style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
+                                โอนเงินไปที่: <b>${order.restaurants?.promptpay_id || 'ติดต่อร้านค้า'}</b><br>
+                                ยอดโอน: <b style="color: #e67e22;">${totalOrderPrice.toLocaleString()}.-</b>
+                            </div>
+                            <input type="file" id="file-${order.id}" accept="image/*" style="font-size: 0.85em; width: 100%; margin-bottom: 10px;">
+                            <button style="width: 100%; padding: 10px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;" onclick="uploadSlipAndPay('${order.id}')">📤 อัปโหลดสลิป</button>
+                        </div>
+                    ` : ''}
+
+                    ${order.status === 'rejected' ? `<div style="background: #fff1f0; border: 1px solid #ffa39e; padding: 12px; border-radius: 8px; margin-top: 15px; color: #cf1322; font-size: 0.9rem;"><b>❌ ร้านยกเลิก:</b> ${order.rejection_reason || 'ขออภัย วัตถุดิบหมด'}</div>` : ''}
+                    
+                    ${riderHtml}
+                </div>
+            `;
+                }).join('');
+
+            } catch (err) {
+                console.error("Error loading orders:", err);
+                listDiv.innerHTML = '<div style="text-align:center; padding:20px; color:red;">เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message + '</div>';
+            }
+        }
+
+        // ฟังก์ชันการแจ้งชำระเงิน
+        async function uploadSlipAndPay(orderId) {
+            const fileInput = document.getElementById(`file-${orderId}`);
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert("กรุณาเลือกรูปภาพสลิปก่อนกดปุ่มยืนยันครับ");
+                return;
+            }
+
+            try {
+                // แสดงสถานะว่ากำลังโหลด
+                const btn = event.target;
+                btn.disabled = true;
+                btn.innerText = "กำลังอัปโหลด...";
+
+                // อัปโหลดไฟล์ภาพสลิปไปยัง Supabase Storage (Bucket: slips)
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${orderId}_${Date.now()}.${fileExt}`;
+                const filePath = `slips/${fileName}`;
+
+                const { data: uploadData, error: uploadError } = await supabaseClient
+                    .storage
+                    .from('slips')
+                    .upload(filePath, file);
+
+                if (uploadError) throw uploadError;
+
+                // ดึง Public URL ของรูปภาพที่อัปโหลดสำเร็จ
+                const { data: { publicUrl } } = supabaseClient
+                    .storage
+                    .from('slips')
+                    .getPublicUrl(filePath);
+
+                // อัปเดตสถานะออเดอร์เป็น 'paid' พร้อมบันทึก URL ของสลิปกลับลงตาราง orders
+                const { error: updateError } = await supabaseClient
+                    .from('orders')
+                    .update({
+                        status: 'paid',
+                        payment_slip_url: publicUrl
+                    })
+                    .eq('id', orderId);
+
+                if (updateError) throw updateError;
+
+                alert("แจ้งชำระเงินสำเร็จ! ร้านค้าจะตรวจสอบสลิปของคุณ");
+                location.reload(); // รีโหลดหน้าเพื่อดูสถานะใหม่
+
+            } catch (err) {
+                console.error(err);
+                alert("เกิดข้อผิดพลาด: " + err.message);
+            }
+        }
+        // เริ่มโหลดข้อมูลทันทีเมื่อเปิดหน้า
+        window.onload = loadMyOrders;
+    </script>
+
+<body>
+
+<html>

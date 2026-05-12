@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายละเอียดออเดอร์ - Appretite</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f4f7f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #84a57f;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #84a57f;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .info-item b {
+            color: #555;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f0f4f0;
+            color: #333;
+        }
+
+        .ing-summary {
+            background: #fffbe6;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 5px solid #ffe58f;
+        }
+
+        .action-area {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn-confirm {
+            flex: 2;
+            background: #84a57f;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-reject {
+            flex: 1;
+            background: #ff4d4f;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h2>รายละเอียดออเดอร์</h2>
+            <a href="restaurant-dashboard.html" class="back-btn">← ย้อนกลับ</a>
+        </div>
+
+        <div id="loading">กำลังโหลดข้อมูล...</div>
+
+        <div id="rider-info-card" class="card hidden"
+            style="border-left: 5px solid var(--primary); background: #f0fdfa; margin-top: 20px;">
+            <h3 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                🛵 ข้อมูลไรเดอร์ผู้รับงาน
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <div style="font-size: 0.85em; color: #64748b;">ชื่อ-นามสกุล</div>
+                    <div id="display-rider-name" style="font-weight: bold;">-</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.85em; color: #64748b;">เบอร์โทรศัพท์</div>
+                    <div id="display-rider-phone" style="font-weight: bold;">-</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.85em; color: #64748b;">ทะเบียนรถ</div>
+                    <div id="display-rider-plate" style="font-weight: bold;">-</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.85em; color: #64748b;">รุ่นรถ / สี</div>
+                    <div id="display-rider-model" style="font-weight: bold;">-</div>
+                </div>
+            </div>
+            <div style="margin-top: 15px; border-top: 1px dashed #2dd4bf; padding-top: 15px; text-align: center;">
+                <a id="rider-call-btn" href="#" class="btn-accept"
+                    style="text-decoration: none; display: inline-block; padding: 10px 25px;">
+                    📞 โทรติดต่อไรเดอร์
+                </a>
+            </div>
+        </div>
+
+        <div id="content" class="hidden">
+            <div class="section">
+                <div class="section-title">👤 ข้อมูลผู้สั่ง</div>
+                <div class="info-grid">
+                    <div class="info-item"><b>ชื่อ:</b> <span id="cust-name">-</span></div>
+                    <div class="info-item"><b>เบอร์โทร:</b> <span id="cust-phone">-</span></div>
+
+                    <div class="info-item" style="grid-column: span 2;"><b>สถานที่จัดส่ง/นัดรับ:</b> <span
+                            id="cust-address">-</span></div>
+
+                    <div class="info-item"
+                        style="grid-column: span 2; background: #fff7ed; padding: 8px; border-radius: 6px; border: 1px solid #ffedd5;">
+                        <b style="color: #c2410c;">⏰ เวลานัดรับ:</b> <span id="display-pickup-time"
+                            style="font-weight: bold; color: #c2410c;">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">🍽️ รายการอาหารที่สั่ง</div>
+                <table id="menu-table">
+                    <thead>
+                        <tr>
+                            <th>เมนู</th>
+                            <th>จำนวน</th>
+                            <th>ราคา/หน่วย</th>
+                            <th>รวม</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <h3 style="text-align: right;">รวมทั้งสิ้น: <span id="total-price">0</span> บาท</h3>
+            </div>
+
+            <div class="section">
+                <div class="section-title">🥦 วัตถุดิบที่ต้องใช้รวม</div>
+                <div class="ing-summary" id="ing-list">
+                    ไม่มีข้อมูลวัตถุดิบ
+                </div>
+            </div>
+
+            <div class="action-area" id="action-buttons">
+                <button class="btn-confirm" onclick="updateStatus('confirmed')">ยืนยันรับออเดอร์</button>
+                <button class="btn-reject" onclick="handleReject()">ปฏิเสธ</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // ตั้งค่า Supabase (ใส่ค่าของคุณ)
+        // ตั้งค่า Supabase (อย่าลืมใส่ URL และ KEY ของคุณ)
+        const SUPABASE_URL = 'https://qjkbtcqjmwwwtqdhgmyu.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_DnNEGxHkiaWXHzYNGQ0luw_oVVR_Bl0';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('id');
+
+        // ฟังก์ชันหลักสำหรับโหลดรายละเอียดออเดอร์เชิงลึก
+        async function loadDetail() {
+            // ป้องกันการทำงานหากไม่ได้รับ ID ออเดอร์มาจาก URL Parameter
+            if (!orderId) return;
+
+            try {
+                // ดึงข้อมูลพื้นฐานจากตาราง 'orders' (ระบุคอลัมน์ pickup_time ให้ชัดเจนเพื่อใช้ตรวจสอบเวลานัดรับ)
+                const { data: order, error } = await supabaseClient
+                    .from('orders')
+                    .select('*, pickup_time')
+                    .eq('id', orderId)
+                    .single(); // ดึงข้อมูลออเดอร์เพียงรายการเดียว
+
+                if (error) throw error;
+                if (!order) { alert("ไม่พบข้อมูลออเดอร์"); return; }
+
+                // ดึงรายการอาหาร (order_items) แยกต่างหาก เพื่อป้องกันปัญหาประสิทธิภาพในการ Join ข้อมูลซ้อนกันหลายชั้น
+                const { data: items } = await supabaseClient
+                    .from('order_items')
+                    .select('quantity, menus(name, price, ingredients(item_name, quantity, unit))')
+                    .eq('order_id', orderId);
+
+                // นำรายการอาหารที่ดึงได้ไปเก็บไว้ใน Object ของออเดอร์หลัก
+                order.order_items = items || [];
+
+                // ดึงข้อมูลโปรไฟล์ของลูกค้าที่สั่ง (Customer Details)
+                const { data: customerData } = await supabaseClient
+                    .from('profiles')
+                    .select('full_name, phone_number, address')
+                    .eq('id', order.customer_id)
+                    .single();
+
+                // กรณีที่ออเดอร์นี้มีไรเดอร์รับงานแล้ว ให้ดึงข้อมูลไรเดอร์เพิ่มเติม
+                let riderProfile = {};
+                let riderInfo = {};
+                if (order.rider_id) {
+                    // ใช้ Promise.all เพื่อดึงข้อมูลโปรไฟล์และข้อมูลพาหนะของไรเดอร์ไปพร้อมกัน (ลดระยะเวลารอ)
+                    const [pRes, rRes] = await Promise.all([
+                        supabaseClient.from('profiles').select('full_name, phone_number').eq('id', order.rider_id).single(),
+                        // แก้ไขจาก .eq('rider_id', ...) เป็น .eq('id', ...) ตามโครงสร้างจริงของคุณ
+                        supabaseClient.from('riders').select('vehicle_plate, vehicle_model').eq('id', order.rider_id).single()
+                    ]);
+
+                    riderProfile = pRes.data || {};
+                    riderInfo = rRes.data || {};
+                }
+
+                // --- เริ่มแสดงผลข้อมูล
+
+                // แสดงข้อมูลผู้สั่งซื้อ (ลูกค้า)
+                document.getElementById('cust-name').innerText = customerData?.full_name || 'ไม่ระบุ';
+                document.getElementById('cust-phone').innerText = customerData?.phone_number || 'ไม่ระบุ';
+                document.getElementById('cust-address').innerText = customerData?.address || 'ไม่ระบุ';
+
+                // แสดงเวลานัดรับ
+                const pickupEl = document.getElementById('display-pickup-time');
+                if (pickupEl) {
+                    if (order.pickup_time) {
+                        const pTime = new Date(order.pickup_time).toLocaleString('th-TH', {
+                            year: 'numeric', month: 'long', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                        pickupEl.innerText = pTime + " น.";
+                    } else {
+                        pickupEl.innerText = "ไม่ได้ระบุเวลานัดรับ";
+                    }
+                }
+
+                // หากมีไรเดอร์รับงานแล้ว ให้แสดง 'บัตรข้อมูลไรเดอร์' และข้อมูลพาหนะ
+                if (order.rider_id) {
+                    const riderCard = document.getElementById('rider-info-card');
+                    if (riderCard) {
+                        riderCard.classList.remove('hidden'); // ปรากฏบัตรข้อมูลไรเดอร์
+                        document.getElementById('display-rider-name').innerText = `คุณ ${riderProfile.full_name || 'ไรเดอร์'}`;
+                        document.getElementById('display-rider-phone').innerText = riderProfile.phone_number || '-';
+
+                        // แสดงข้อมูลทะเบียนและรุ่นรถ
+                        document.getElementById('display-rider-plate').innerText = riderInfo.vehicle_plate || '-';
+                        document.getElementById('display-rider-model').innerText = riderInfo.vehicle_model || '-';
+
+                        // ตั้งค่าปุ่มกดเพื่อโทรออกหาไรเดอร์ได้ทันที
+                        if (document.getElementById('rider-call-btn')) {
+                            document.getElementById('rider-call-btn').href = `tel:${riderProfile.phone_number}`;
+                        }
+                    }
+                }
+                // ส่วนคำนวณอาหาร
+                let total = 0;
+                let ingSum = {}; // Object สำหรับเก็บยอดรวมวัตถุดิบที่ต้องใช้ในออเดอร์นี้
+                const tbody = document.querySelector('#menu-table tbody');
+                if (tbody) {
+                    tbody.innerHTML = "";
+                    order.order_items.forEach(item => {
+                        const m = item.menus;
+                        if (!m) return;
+
+                        // คำนวณราคาย่อย (ราคา x จำนวนจาน)
+                        const subtotal = (m.price || 0) * item.quantity;
+                        total += subtotal;
+
+                        // เพิ่มแถวรายการอาหารลงในตาราง
+                        tbody.innerHTML += `<tr>
+                        <td>${m.name}</td>
+                        <td>${item.quantity}</td>
+                        <td>${(m.price || 0).toLocaleString()}</td>
+                        <td>${subtotal.toLocaleString()}</td>
+                    </tr>`;
+
+                        // สะสมจำนวนวัตถุดิบที่ต้องใช้ โดยคำนวณจาก (สูตรอาหาร x จำนวนจานที่สั่ง
+                        if (m.ingredients) {
+                            m.ingredients.forEach(ing => {
+                                const amount = ing.quantity * item.quantity;
+                                if (ingSum[ing.item_name]) ingSum[ing.item_name].qty += amount;
+                                else ingSum[ing.item_name] = { qty: amount, unit: ing.unit };
+                            });
+                        }
+                    });
+                }
+
+                // แสดงราคาสุทธิรวมของออเดอร์
+                document.getElementById('total-price').innerText = total.toLocaleString();
+
+                // แสดงรายการสรุปวัตถุดิบทั้งหมดที่ต้องเตรียมสำหรับออเดอร์นี้
+                const ingDiv = document.getElementById('ing-list');
+                if (ingDiv) {
+                    const ings = Object.entries(ingSum);
+                    ingDiv.innerHTML = ings.length > 0
+                        ? ings.map(([n, i]) => `<div>• ${n} : ${i.qty} ${i.unit}</div>`).join('')
+                        : "ไม่มีข้อมูลวัตถุดิบ";
+                }
+
+                // เมื่อโหลดข้อมูลครบแล้ว ให้ซ่อน Loader และแสดงเนื้อหาออเดอร์ทั้งหมด
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('content').classList.remove('hidden');
+
+
+                // การจัดการสถานะปุ่มและข้อความแจ้งเตือนตามสถานะออเดอร์ 
+
+                // อ้างอิงถึงพื้นที่สำหรับแสดงปุ่มหรือข้อความสถานะ (Action Area)
+                const actionArea = document.getElementById('action-buttons');
+
+                // ตรวจสอบว่ามีพื้นที่แสดงผล และออเดอร์ไม่ได้อยู่ในสถานะรอเริ่มต้น (Pending/Pending_admin)
+                if (actionArea && order.status !== 'pending' && order.status !== 'pending_admin') {
+                    // สร้าง Element ใหม่เพื่อแสดงข้อความสถานะที่ชัดเจนให้กับเจ้าของร้าน
+                    const statusMsg = document.createElement('div');
+                    statusMsg.style = "text-align:center; padding:20px; border-radius:12px; margin-bottom:20px; font-weight:bold; font-size:1.1rem;";
+
+                    // เงื่อนไขที่ 1: ร้านค้ากดรับออเดอร์แล้ว (Confirmed)
+                    if (order.status === 'confirmed') {
+                        statusMsg.style.background = '#fff3cd'; statusMsg.style.color = '#856404'; statusMsg.style.border = '1px solid #ffeeba';
+                        statusMsg.innerHTML = `⏳ รับออเดอร์แล้ว: รอลูกค้าแนบสลิปและชำระเงิน`;
+                    
+                    // เงื่อนไขที่ 2: ลูกค้าชำระเงินและแนบสลิปแล้ว (Paid)
+                    } else if (order.status === 'paid') {
+                        statusMsg.style.background = '#d4edda'; statusMsg.style.color = '#155724'; statusMsg.style.border = '1px solid #c3e6cb';
+                        let slipLink = order.payment_slip_url ? `<br><a href="${order.payment_slip_url}" target="_blank" style="color:#155724; font-size:0.9rem;">🖼️ ดูสลิปโอนเงิน</a>` : "";
+                        statusMsg.innerHTML = `✅ ชำระเงินแล้ว: รอไรเดอร์กดรับงาน ${slipLink}`;
+
+                    // เงื่อนไขที่ 3: มีไรเดอร์กดรับงานจัดส่งแล้ว (Rider Accepted)
+                    } else if (order.status === 'rider_accepted') {
+                        statusMsg.style.background = '#e0f2fe'; statusMsg.style.color = '#0369a1'; statusMsg.style.border = '1px solid #bae6fd';
+                        statusMsg.innerHTML = `🛵 ไรเดอร์รับงานแล้ว: กำลังเตรียมจัดส่ง`;
+
+                    // เงื่อนไขที่ 4: ออเดอร์ถูกยกเลิก (Rejected)
+                    } else if (order.status === 'rejected') {
+                        statusMsg.style.background = '#f8d7da'; statusMsg.style.color = '#721c24'; statusMsg.style.border = '1px solid #f5c6cb';
+                        statusMsg.innerHTML = `❌ ปฏิเสธการรับออเดอร์แล้ว (เหตุผล: ${order.rejection_reason || 'ไม่ได้ระบุ'})`;
+                    } else {
+                        statusMsg.style.background = '#e2e3e5';
+                        statusMsg.innerHTML = `สถานะ: ${order.status.toUpperCase()}`;
+                    }
+
+                    actionArea.innerHTML = ""; // ล้างปุ่มเดิมทิ้ง
+                    actionArea.appendChild(statusMsg); // ใส่ข้อความสถานะเข้าไปแทน
+                }
+                
+            } catch (err) {
+                console.error("Error Detail:", err.message);
+                const loadingEl = document.getElementById('loading');
+                if (loadingEl) loadingEl.innerText = "❌ เกิดข้อผิดพลาด: " + err.message;
+            }
+        }
+
+        // ฟังก์ชันอัปเดตสถานะออเดอร์ไปยังฐานข้อมูล 
+        async function updateStatus(newStatus, reason = null) {
+            // ป้องกันการทำงานหากไม่มี ID ออเดอร์
+            if (!orderId) return;
+
+            try {
+                const updateData = { status: newStatus };
+                // ถ้ามีการปฏิเสธ ให้ใส่เหตุผลไปด้วย
+                if (reason) updateData.rejection_reason = reason;
+
+                // ใช้คำสั่ง update ข้อมูลในตาราง 'orders' ตาม ID ที่กำหนด
+                const { error } = await supabaseClient
+                    .from('orders')
+                    .update(updateData)
+                    .eq('id', orderId);
+
+                if (error) throw error;
+
+                // แจ้งเตือนเมื่อสำเร็จและรีโหลดหน้าจอเพื่อแสดงผลข้อมูลล่าสุด
+                alert("อัปเดตสถานะสำเร็จ!");
+                location.reload(); // รีโหลดหน้าเพื่อให้สถานะใหม่แสดงผล
+            } catch (err) {
+                console.error("Update Error:", err.message);
+                alert("❌ ไม่สามารถอัปเดตสถานะได้: " + err.message);
+            }
+        }
+        // ฟังก์ชันปฏิเสธรับงาน
+        function handleReject() {
+            // แสดงกล่องข้อความให้ร้านค้ากรอกเหตุผล (เช่น วัตถุดิบหมด)
+            const reason = prompt("ระบุเหตุผลที่ปฏิเสธ:");
+            // หากมีการกรอกเหตุผล ให้ส่งค่าสถานะ 'rejected' และเหตุผลไปที่ฟังก์ชันอัปเดต
+            if (reason) updateStatus('rejected', reason);
+        }
+
+        // กำหนดให้เรียกใช้ฟังก์ชันโหลดรายละเอียดทันทีเมื่อหน้าเว็บโหลดเสร็จ
+        window.onload = loadDetail;
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ร้านอาหารของคุณ - Appretite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inria+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 1. Base Structure */
+        body {
+            background-color: #84a57f;
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inria Serif', serif;
+            color: #333;
+            position: relative;
+            /* เพื่อให้ปุ่ม back-btn อ้างอิงตำแหน่งได้ถูกต้อง */
+        }
+
+        /* 2. Navigation & Header */
+        .back-btn {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.1);
+            color: white;
+            font-size: 2rem;
+            text-decoration: none;
+            border-radius: 50%;
+            transition: transform 0.2s, background 0.2s;
+            cursor: pointer;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.1);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .brand-header {
+            text-align: center;
+            color: white;
+            font-size: 3.5rem;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .page-title {
+            text-align: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: 400;
+            margin-bottom: 5px;
+        }
+
+        .res-name {
+            text-align: center;
+            color: #f0f0f0;
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+        }
+
+        /* 3. Dashboard Layout */
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .panel {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            width: 100%;
+            box-sizing: border-box;
+            /* ป้องกัน panel บวมเกินขนาด */
+        }
+
+        /* 4. Form Components */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: 'Inria Serif';
+            box-sizing: border-box;
+        }
+
+        .ing-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+
+        .btn-add-ing {
+            background: #eee;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            font-family: 'Inria Serif';
+        }
+
+        .btn-save {
+            width: 100%;
+            background: #333;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-save:hover {
+            background: #444;
+        }
+
+        /* 5. List Items (Menu & Orders) */
+        .menu-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #eee;
+        }
+
+        .action-btns button {
+            margin-left: 5px;
+            padding: 6px 12px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-family: 'Inria Serif';
+        }
+
+        .btn-edit {
+            background: #ffcc00;
+            color: #333;
+        }
+
+        .btn-delete {
+            background: #ff4d4d;
+            color: white;
+        }
+
+        .order-card {
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border-left: 8px solid #333;
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .order-unread {
+            background: #fff0f0;
+            border-left-color: #ff4d4d;
+        }
+
+        .order-read {
+            background: #f9f9f9;
+            border-left-color: #84a57f;
+        }
+
+        .btn-detail {
+            margin-top: 10px;
+            background: #333;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: none;
+            cursor: pointer;
+            font-family: 'Inria Serif';
+        }
+
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 3px 10px;
+            border-radius: 5px;
+            background: #eee;
+            font-weight: bold;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            margin-top: 50px;
+        }
+
+        /* 6. Responsive */
+        @media (max-width: 900px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+
+            .brand-header {
+                font-size: 2.5rem;
+            }
+
+            .back-btn {
+                top: 15px;
+                left: 15px;
+                width: 40px;
+                height: 40px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <a href="restaurant-manage.html" class="back-btn">←</a>
+    <h1 class="brand-header">Appretite</h1>
+    <div class="page-title">ร้านอาหารของคุณ</div>
+    <div id="res-name-display" class="res-name">กำลังโหลดข้อมูลร้าน...</div>
+
+    <div class="dashboard-container">
+        <div class="panel">
+            <h2>จัดการเมนู</h2>
+            <div id="menu-content">
+                <div id="menu-list">
+                    <div class="empty-state">กำลังโหลดเมนู...</div>
+                </div>
+                <button class="btn-save" style="margin-top:20px; background:#84a57f;" onclick="toggleMenuForm(true)">+
+                    เพิ่มเมนูใหม่</button>
+            </div>
+
+            <div id="menu-form" class="hidden"
+                style="display:none; margin-top:20px; border-top: 1px solid #eee; padding-top:20px;">
+                <h3>เพิ่มเมนูใหม่</h3>
+                <div class="form-group">
+                    <label>ชื่อเมนู</label>
+                    <input type="text" id="menu-name" placeholder="เช่น ข้าวกะเพราไก่">
+                </div>
+                <div class="form-group">
+                    <label>ราคา (บาท)</label>
+                    <input type="number" id="menu-price" placeholder="50">
+                </div>
+                <label>วัตถุดิบที่ใช้ (ต่อ 1 จาน)</label>
+                <div id="ingredients-container">
+                    <div class="ing-row">
+                        <input type="text" class="ing-name" placeholder="ชื่อวัตถุดิบ">
+                        <input type="number" class="ing-qty" placeholder="ปริมาณ">
+                        <input type="text" class="ing-unit" placeholder="หน่วย">
+                    </div>
+                </div>
+                <button class="btn-add-ing" onclick="addIngredientRow()">+ เพิ่มวัตถุดิบ</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-save" onclick="saveMenu()">บันทึกเมนู</button>
+                    <button class="btn-save" style="background:#ccc;" onclick="toggleMenuForm(false)">ยกเลิก</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>ออเดอร์ที่เข้ามา</h2>
+            <div id="order-list">
+                <div class="empty-state">กำลังโหลดออเดอร์...</div>
+            </div>
+        </div>
+        <div id="advanced-report-section" style="margin-top: 30px;">
+            <h2 style="color: #1e293b;">📊 รายงานสรุปวัตถุดิบและรายได้รายวัน</h2>
+
+            <div id="advanced-report-display">
+                <p style="color: #64748b;">กำลังคำนวณข้อมูลรายงาน...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://qjkbtcqjmwwwtqdhgmyu.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_DnNEGxHkiaWXHzYNGQ0luw_oVVR_Bl0';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ประกาศตัวแปร Global เพื่อใช้เก็บ ID ของร้านค้าและ ID ของเมนูที่กำลังแก้ไข เพื่อเข้าถึงได้จากทุกฟังก์ชัน
+        let currentRestaurantId = null;
+        let editingMenuId = null;
+
+        // ฟังก์ชันหลักที่ทำงานเมื่อโหลดหน้าจอ เพื่อเตรียมข้อมูลร้านค้าขึ้นมาแสดงผล
+        async function initDashboard() {
+            try {
+                // ตรวจสอบสถานะการล็อกอินของผู้ใช้งาน
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) {
+                    // หากไม่ได้ล็อกอิน ให้ส่งกลับไปที่หน้า Login หลัก
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // ดึงข้อมูลร้านค้าจากตาราง 'restaurants' โดยตรวจสอบผ่าน owner_id ของผู้ใช้ที่ล็อกอิน
+                const { data: res, error } = await supabaseClient
+                    .from('restaurants')
+                    .select('*')
+                    .eq('owner_id', session.user.id)
+                    .maybeSingle(); // ค้นหาเพียงข้อมูลเดียว (ถ้าไม่เจอจะเป็น null)
+
+                if (res) {
+                    // กรณีพบข้อมูลร้านค้า: บันทึก ID ร้านค้าไว้ในตัวแปร Global
+                    currentRestaurantId = res.id;
+                    // แสดงชื่อร้านค้าบนหน้า Dashboard
+                    document.getElementById('res-name-display').innerText = res.name;
+
+                    // เรียกใช้ฟังก์ชันย่อยเพื่อโหลดข้อมูลต่างๆ ที่เกี่ยวข้องกับร้านค้านี้
+                    await loadMenus();
+                    await loadOrders();
+                    await loadAdvancedDailyReport();
+
+                    // การควบคุมการแสดงผล (UI Control): ซ่อนตัวโหลดและแสดงเนื้อหา Dashboard
+                    const loader = document.getElementById('loading');
+                    if (loader) loader.classList.add('hidden'); // ซ่อน Element ที่ใช้ตอนโหลดข้อมูล
+
+                    const content = document.getElementById('content');
+                    if (content) content.classList.remove('hidden'); // แสดงส่วนเนื้อหาหลัก
+
+                } else {
+                    // กรณีไม่พบข้อมูลร้านค้า: แจ้งเตือนและส่งกลับไปหน้าลงทะเบียนร้านค้า
+                    alert("ไม่พบข้อมูลร้านอาหาร");
+                    window.location.href = 'restaurant-manage.html';
+                }
+            } catch (err) {
+                // บันทึกข้อผิดพลาดที่เกิดขึ้นลง Console เพื่อใช้ในการ Debug
+                console.error("Critical Error:", err.message);
+            }
+        }
+
+        // ฟังก์ชันสำหรับเปิด-ปิด ฟอร์มการจัดการเมนูอาหาร (เพิ่ม/แก้ไข)
+        function toggleMenuForm(show) {
+            // สลับการแสดงผลระหว่าง 'รายการเมนู' และ 'ฟอร์มแก้ไขเมนู'
+            document.getElementById('menu-list').style.display = show ? 'none' : 'block';
+            document.getElementById('menu-form').style.display = show ? 'block' : 'none';
+
+            // ถ้าสั่งปิดฟอร์ม ให้ล้างสถานะการแก้ไขด้วย
+            if (!show) {
+                editingMenuId = null; // ล้างสถานะ ID ของเมนูที่เคยแก้ไข
+                document.getElementById('menu-name').value = '';
+                document.getElementById('menu-price').value = '';
+                document.getElementById('ingredients-container').innerHTML = '';
+
+                // เปลี่ยนหัวข้อกลับเป็นโหมด "เพิ่มเมนูใหม่"
+                document.querySelector('#menu-form h3').innerText = "เพิ่มเมนูใหม่";
+            }
+        }
+
+        // ฟังก์ชันสำหรับเพิ่มแถววัตถุดิบใหม่แบบค่าว่าง (เรียกใช้เมื่อกดปุ่ม "เพิ่มวัตถุดิบ")
+        function addIngredientRow() {
+            // เรียกใช้ฟังก์ชันหลักโดยส่งค่าว่างเข้าไป
+            addIngredientRowWithData('', '', '');
+        }
+
+        // ฟังก์ชันหลักในการสร้าง Element ของแถววัตถุดิบลงในหน้า HTML
+        function addIngredientRowWithData(name, qty, unit) {
+            // อ้างอิงถึง Container ที่ใช้เก็บรายการวัตถุดิบ
+            const container = document.getElementById('ingredients-container');
+            // สร้าง div ใหม่ขึ้นมาเพื่อเป็นแถวสำหรับกรอกข้อมูล
+            const row = document.createElement('div');
+            row.className = 'ing-row'; // กำหนดคลาสเพื่อใช้จัดรูปแบบ CSS
+
+            // ใส่โครงสร้าง HTML สำหรับ Input ข้อมูลวัตถุดิบ (ชื่อ, ปริมาณ, หน่วย) และปุ่มลบ
+            row.innerHTML = `
+        <input type="text" class="ing-name" placeholder="ชื่อวัตถุดิบ" value="${name}">
+        <input type="number" class="ing-qty" placeholder="ปริมาณ" value="${qty}">
+        <input type="text" class="ing-unit" placeholder="หน่วย" value="${unit}">
+        <button onclick="this.parentElement.remove()" style="color:red; background:none; border:none; cursor:pointer;">✕</button>
+    `;
+            // นำแถวที่สร้างเสร็จแล้วไปต่อท้ายใน Container
+            container.appendChild(row);
+        }
+
+        // ฟังก์ชันสำหรับโหลดรายการเมนูทั้งหมดของร้านนี้มาจากฐานข้อมูล
+        async function loadMenus() {
+            // เช็คว่ามี ID หรือยัง ถ้าไม่มีให้หยุดทำงาน
+            if (!currentRestaurantId) return;
+
+            // ดึงข้อมูลจากตาราง 'menus'
+            const { data: menus, error } = await supabaseClient
+                .from('menus')
+                .select('*')
+
+                // เงื่อนไขที่ 1: ต้องเป็นเมนูที่สังกัดร้านค้านี้ (Relationship 1:N)
+                .eq('restaurant_id', currentRestaurantId)
+
+                // เงื่อนไขที่ 2: กรองเฉพาะเมนูที่ยังไม่ถูกลบ (Soft Delete Pattern)
+                .eq('is_active', true);
+
+            const listDiv = document.getElementById('menu-list');
+
+            // ตรวจสอบ Error จากการเชื่อมต่อฐานข้อมูล
+            if (error) {
+                console.error(error);
+                return;
+            }
+
+            // กรณีที่ร้านค้ายังไม่มีข้อมูลเมนูเลย
+            if (!menus || menus.length === 0) {
+                listDiv.innerHTML = '<div class="empty-state">ร้านของคุณยังไม่มีเมนู</div>';
+                return;
+            }
+
+            // ทำการวนลูปข้อมูลเมนู (Map) เพื่อสร้างรายการอาหารในรูปแบบ HTML
+            listDiv.innerHTML = menus.map(m => `
+            <div class="menu-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee;">
+                <div style="flex: 1;">
+                    <span style="font-size: 1.1rem;"><b>${m.name}</b> - ${m.price}.-</span>
+                </div>
+        
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-edit" onclick="prepareEditMenu('${m.id}'); toggleMenuForm(true);" 
+                        style="padding: 5px 15px; border-radius: 5px; cursor: pointer; border: none;">แก้ไข</button>
+                    <button class="btn-delete" onclick="softDeleteMenu('${m.id}')" 
+                        style="padding: 5px 15px; border-radius: 5px; cursor: pointer; border: none;">ลบ</button>
+                </div>
+            </div>
+        `).join(''); // รวม array ของสตริง HTML เข้าด้วยกัน
+        }
+
+        // ฟังก์ชันสำหรับดึงข้อมูลเมนูที่จะแก้ไขมาใส่ในฟอร์ม
+        async function prepareEditMenu(menuId) {
+            // ดึงข้อมูลเมนูที่ต้องการแก้ไข พร้อมโหลดรายการวัตถุดิบ (Sub-table) ที่สัมพันธ์กันมาด้วย
+            const { data: menu, error } = await supabaseClient
+                .from('menus')
+                .select('*, ingredients(*)') // ดึงวัตถุดิบมาด้วย
+                .eq('id', menuId)
+                .single(); // ดึงข้อมูลเพียงหนึ่งรายการ
+
+            if (error) return alert("ไม่สามารถดึงข้อมูลเมนูได้");
+
+            editingMenuId = menuId; // เก็บ ID ไว้ที่ตัวแปรหลัก
+
+            // นำข้อมูลเมนูเดิมมาใส่ในช่อง Input ของฟอร์ม
+            document.getElementById('menu-name').value = menu.name;
+            document.getElementById('menu-price').value = menu.price;
+
+            // ล้างแถววัตถุดิบในฟอร์มเดิมออกก่อน เพื่อเตรียมโหลดข้อมูลจริงจากฐานข้อมูล
+            document.getElementById('ingredients-container').innerHTML = ''; // ล้างช่องวัตถุดิบเก่า
+
+            // โหลดวัตถุดิบเดิมกลับมาโชว์ในฟอร์ม
+            if (menu.ingredients && menu.ingredients.length > 0) {
+                menu.ingredients.forEach(ing => {
+                    // เรียกฟังก์ชันสร้างแถวข้อมูลวัตถุดิบเดิม (ชื่อ, ปริมาณ, หน่วย)
+                    addIngredientRowWithData(ing.item_name, ing.quantity, ing.unit);
+                });
+            }
+
+            // เปลี่ยนข้อความบนหัวข้อฟอร์มและปุ่มกดให้เป็นโหมด "แก้ไข"
+            document.querySelector('#menu-form h3').innerText = "แก้ไขเมนู";
+            const submitBtn = document.getElementById('submit-menu-btn');
+            if (submitBtn) submitBtn.innerText = "บันทึกการแก้ไข";
+        }
+
+        // การบันทึกข้อมูลเมนูและวัตถุดิบ
+        async function saveMenu() {
+            // ดึงค่าจากฟอร์มหน้าเว็บ
+            const name = document.getElementById('menu-name').value;
+            const price = document.getElementById('menu-price').value;
+
+            // ตรวจสอบความถูกต้องของข้อมูลเบื้องต้น
+            if (!name || !price) {
+                alert("กรุณากรอกชื่อเมนูและราคา");
+                return;
+            }
+
+            let menuId = editingMenuId;
+
+            if (editingMenuId) {
+                // กรณีแก้ไข (Update)
+                await supabaseClient.from('menus').update({ name, price }).eq('id', editingMenuId);
+                // ลบวัตถุดิบเก่าทิ้งเพื่อเตรียมลงใหม่ (Re-insert)
+                await supabaseClient.from('ingredients').delete().eq('menu_id', editingMenuId);
+            } else {
+                // กรณีเพิ่มใหม่ (Insert)
+                const { data, error } = await supabaseClient
+                    .from('menus')
+                    .insert([{ restaurant_id: currentRestaurantId, name, price, is_active: true }])
+                    .select(); // ดึงข้อมูลที่เพิ่ง insert กลับมาเพื่อเอา ID ใหม่
+
+                if (error) return alert(error.message);
+                menuId = data[0].id; // เก็บ ID ที่ได้จากเมนูใหม่เพื่อนำไปผูกกับวัตถุดิบ
+            }
+
+            // ส่วนการจัดการข้อมูลวัตถุดิบ (Ingredients Handling)
+            // ดึงข้อมูลจาก Class ของ Input ในแต่ละแถวมาเก็บในรูปแบบ Array
+            const ingNames = document.getElementsByClassName('ing-name');
+            const ingQtys = document.getElementsByClassName('ing-qty');
+            const ingUnits = document.getElementsByClassName('ing-unit');
+            const ingsToInsert = [];
+
+            // วนลูปเก็บข้อมูลวัตถุดิบทุกแถวที่กรอกชื่อไว้
+            for (let i = 0; i < ingNames.length; i++) {
+                if (ingNames[i].value.trim() !== '') {
+                    ingsToInsert.push({
+                        menu_id: menuId, // ผูก Foreign Key กับเมนู
+                        item_name: ingNames[i].value,
+                        quantity: parseFloat(ingQtys[i].value) || 0, // แปลงค่าเป็นตัวเลขทศนิยม
+                        unit: ingUnits[i].value
+                    });
+                }
+            }
+
+            // บันทึกวัตถุดิบชุดใหม่ลงในตาราง ingredients แบบชุดข้อมูล (Bulk Insert)
+            if (ingsToInsert.length > 0) {
+                await supabaseClient.from('ingredients').insert(ingsToInsert);
+            }
+
+            // ล้างสถานะการแก้ไขและรีเฟรชหน้าจอ
+            editingMenuId = null;
+            alert("บันทึกข้อมูลเรียบร้อย!");
+            toggleMenuForm(false); // ปิดฟอร์มกลับไปหน้าหลัก
+            loadMenus(); // โหลดรายการเมนูใหม่เพื่อแสดงผลข้อมูลล่าสุด
+        }
+
+
+        async function softDeleteMenu(menuId) {
+            // แสดงหน้าต่างยืนยันการลบ เพื่อป้องกันผู้ใช้กดพลาด
+            if (!confirm("ยืนยันการลบเมนูนี้?")) return;
+
+            // ทำการอัปเดตสถานะ 'is_active' ให้เป็น false แทนการใช้คำสั่ง DELETE 
+            // เพื่อเก็บประวัติข้อมูล (Data History) ไว้ใช้ในการดูรายงานยอดขายย้อนหลัง
+            const { error } = await supabaseClient
+                .from('menus')
+                .update({ is_active: false }) // เปลี่ยนสถานะเป็นไม่ใช้งาน
+                .eq('id', menuId); // ระบุเมนูที่ต้องการเปลี่ยนสถานะ
+
+            if (error) {
+                // แจ้งเตือนกรณีเกิดข้อผิดพลาดจากฝั่ง Server
+                alert("ลบไม่สำเร็จ: " + error.message);
+            } else {
+                alert("ลบเรียบร้อย (Soft Delete)");
+                // เรียกโหลดเมนูใหม่ ข้อมูลจะหายไปจากจอทันทีเพราะเรากรอง eq('is_active', true) ไว้
+                await loadMenus();
+            }
+        }
+
+        // ฟังก์ชันสำหรับโหลดรายการออเดอร์ทั้งหมดที่ลูกค้าสั่งมายังร้านนี้
+        async function loadOrders() {
+            // ดึงข้อมูลออเดอร์พร้อมกับทำการ Join ข้ามไปยังตาราง 'profiles' (Alias: customer)
+            // เพื่อเอาชื่อเต็ม (full_name) ของลูกค้ามาแสดงผล แทนที่จะแสดงแค่ UUID
+            const { data: orders, error } = await supabaseClient
+                .from('orders')
+                .select(`
+                    *, 
+                    customer:profiles!customer_id(full_name)
+                `) // ดึงข้อมูลทุกฟิลด์ และดึงชื่อลูกค้าผ่าน Foreign Key (customer_id)
+                .eq('restaurant_id', currentRestaurantId) // กรองเฉพาะของร้านค้านี้
+                .order('created_at', { ascending: false }); // เรียงลำดับตามเวลาล่าสุดขึ้นก่อน
+
+            if (error) {
+                console.error("Error loading orders:", error);
+                return;
+            }
+
+            const orderDiv = document.getElementById('order-list');
+
+            // ตรวจสอบกรณีที่ร้านค้ายังไม่มีออเดอร์ใดๆ เลย
+            if (!orders || orders.length === 0) {
+                orderDiv.innerHTML = '<div class="empty-state">ยังไม่มีออเดอร์เข้ามา</div>';
+                return;
+            }
+
+            // วนลูปเพื่อสร้างการ์ดออเดอร์ (Order Card) แสดงผลบน Dashboard
+            orderDiv.innerHTML = orders.map(o => `
+                <div class="order-card ${o.is_read ? 'order-read' : 'order-unread'}">
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <div>
+                            <div style="font-size:1.1rem;">คุณ <b>${o.customer ? o.customer.full_name : 'ลูกค้า'}</b> ได้สั่งอาหารเข้ามา</div>
+                            <div style="font-size:0.8rem; color:#666;">เมื่อ: ${new Date(o.created_at).toLocaleString('th-TH')}</div>
+                        </div>
+                        <span class="status-badge">${o.status}</span>
+                    </div>
+                    <button class="btn-detail" onclick="viewOrderDetail('${o.id}')">ดูรายละเอียดออเดอร์</button>
+                </div>
+            `).join(''); // รวม HTML เข้าเป็นสตริงเดียวเพื่อใส่ในหน้าจอ
+        }
+
+        // ฟังก์ชันสำหรับเปลี่ยนหน้าไปยังรายละเอียดออเดอร์เชิงลึก
+        async function viewOrderDetail(orderId) {
+            // เปิดหน้าใหม่พร้อมส่ง ID ออเดอร์ไปทาง URL Parameter
+            window.location.href = `order-detail.html?id=${orderId}`;
+        }
+
+        // คำสั่งทำงานเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์
+        window.onload = function () {
+            // เรียกใช้ฟังก์ชันเตรียมข้อมูล Dashboard ทันที
+            initDashboard();
+        };
+
+        // การคำนวณและสร้างรายงานสรุปยอดขายและวัตถุดิบเชิงลึก
+        async function loadAdvancedDailyReport() {
+
+            // ป้องกันการทำงานหากยังไม่มีข้อมูล ID ร้านค้า
+            if (!currentRestaurantId) return;
+
+            try {
+                // ดึงข้อมูลออเดอร์แบบ Nested Join (ดึงความสัมพันธ์หลายชั้น)
+                // Orders -> Order_items -> Menus -> Ingredients
+                const { data: orders, error } = await supabaseClient
+                    .from('orders')
+                    .select(`
+                        id,
+                        pickup_time,
+                        status,
+                        order_items(
+                            quantity,
+                            menus(
+                                price, 
+                                ingredients(item_name, quantity, unit)
+                            )
+                        )
+                    `)
+                    .eq('restaurant_id', currentRestaurantId)
+
+                    // กรองเฉพาะออเดอร์ที่มีสถานะชำระเงินแล้วหรือดำเนินการส่งสำเร็จเท่านั้น
+                    .in('status', ['paid', 'rider_accepted', 'picked_up', 'completed']);
+
+                if (error) {
+                    console.error("Report Error:", error.message);
+                    return;
+                }
+
+                // ตัวแปรสำหรับเก็บข้อมูลสรุปรายวันในรูปแบบ Object
+                let dailySummary = {};
+
+                if (orders && orders.length > 0) {
+                    orders.forEach(order => {
+                        // ตรวจสอบและแยกวันที่จาก pickup_time 
+                        if (!order.pickup_time) return; 
+
+                        // แปลงค่า pickup_time ให้เป็นวันที่แบบ "วว/ดด/ปปปป" เพื่อใช้เป็น Key ในการแยกกลุ่ม
+                        const dateObj = new Date(order.pickup_time);
+                        const dateKey = dateObj.toLocaleDateString('th-TH');
+
+                        // หากยังไม่มีข้อมูลของวันที่นี้ในระบบสรุป ให้สร้างโครงสร้างข้อมูลเริ่มต้น
+                        if (!dailySummary[dateKey]) {
+                            dailySummary[dateKey] = { revenue: 0, ingredients: {} };
+                        }
+
+                        // วนลูปรายการอาหาร (Order_items) ในแต่ละออเดอร์
+                        if (order.order_items) {
+                            order.order_items.forEach(item => {
+                                // 1. คำนวณรายได้ลงในวันที่นั้นๆ
+                                const price = item.menus?.price || 0;
+                                dailySummary[dateKey].revenue += (price * item.quantity);
+
+                                // 2. คำนวณวัตถุดิบแยกตามวันที่
+                                const menuIngredients = item.menus?.ingredients || [];
+                                menuIngredients.forEach(ing => {
+                                    const ingName = `${ing.item_name} (${ing.unit})`;
+                                    // คำนวณปริมาณที่ใช้จริง: (จำนวนจานที่สั่ง * ปริมาณวัตถุดิบต่อจาน)
+                                    const totalUsed = item.quantity * ing.quantity;
+                                    // รวมยอดการใช้วัตถุดิบลงในวันที่นั้นๆ
+                                    dailySummary[dateKey].ingredients[ingName] = (dailySummary[dateKey].ingredients[ingName] || 0) + totalUsed;
+                                });
+                            });
+                        }
+                    });
+                }
+
+                // ส่งข้อมูลที่แยกตามวันที่เรียบร้อยแล้วไปแสดงผล
+                renderAdvancedReport(dailySummary);
+
+            } catch (err) {
+                console.error("Critical Report Error:", err.message);
+            }
+        }
+        
+        // แสดงผลรายงานบนหน้าเว็บ
+        function renderAdvancedReport(dailySummary) {
+            // กำหนดเป้าหมาย Element ที่จะนำข้อมูลไปแสดง
+            const reportContainer = document.getElementById('advanced-report-display');
+
+            // กรณีไม่มีข้อมูลยอดขาย
+            if (Object.keys(dailySummary).length === 0) {
+                reportContainer.innerHTML = '<p>ยังไม่มีข้อมูลออเดอร์ที่สำเร็จ</p>';
+                return;
+            }
+
+            let htmlContent = "";
+
+            // วนลูปข้อมูลสรุปรายวันเพื่อสร้างตารางรายงานในแต่ละวัน
+            for (const [date, data] of Object.entries(dailySummary)) {
+                htmlContent += `
+            <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <h4 style="margin-top:0; color: #2563eb;">📅 วันที่นัดรับ: ${date}</h4>
+                <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 15px;">
+                    รายได้รวม: <span style="color: #16a34a;">${data.revenue.toLocaleString()} บาท</span>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="background: #f8fafc; text-align: left;">
+                            <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">วัตถุดิบ</th>
+                            <th style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right;">ปริมาณรวม (${data.unit || 'หน่วย'})</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${Object.entries(data.ingredients).map(([ingName, amount]) => `
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">${ingName}</td>
+                                <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: bold;">
+                                    ${amount.toFixed(2)}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+            }
+
+            // เอา HTML ที่สร้างเสร็จแล้ว ไปพ่นใส่ในหน้าจอ (ฉีดเข้าไปใน div ที่จองไว้)
+            reportContainer.innerHTML = htmlContent;
+        }
+
+    </script>
+</body>
+
+</html>

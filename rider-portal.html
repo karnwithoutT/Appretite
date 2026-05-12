@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rider Portal - Appretite</title>
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'unsafe-inline';">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #2dd4bf;
+            --secondary: #0f172a;
+            --accent: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            margin-bottom: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        h2 {
+            color: var(--secondary);
+            margin-top: 0;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #64748b;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 5px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--secondary);
+        }
+
+        .job-card {
+            border-left: 5px solid var(--primary);
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #fff;
+            position: relative;
+        }
+
+        .time-badge {
+            background: #fee2e2;
+            color: var(--danger);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .departure-info {
+            font-size: 0.85em;
+            color: #64748b;
+            margin-top: 10px;
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 10px;
+        }
+
+        .btn-accept {
+            background: var(--secondary);
+            color: white;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            width: auto;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div id="loading" class="card" style="text-align: center; padding: 40px;">
+            ⌛ กำลังตรวจสอบสถานะไรเดอร์...
+        </div>
+
+        <div id="registration-form" class="card hidden">
+            <h2>🚀 สมัครเป็นไรเดอร์</h2>
+            <p style="color: #64748b; font-size: 0.9em; margin-bottom: 20px;">ร่วมทีมส่งความอร่อยกับเรา
+                ยืนยันข้อมูลด้านล่าง</p>
+
+            <label>ชื่อ-นามสกุล</label>
+            <input type="text" id="reg-name" readonly style="background: #f1f5f9;">
+
+            <label>เบอร์โทรศัพท์ (ติดต่อลูกค้า)</label>
+            <input type="text" id="reg-phone">
+
+            <label>ทะเบียนรถ</label>
+            <input type="text" id="reg-plate" placeholder="เช่น 1กข 1234 กทม.">
+
+            <label>รุ่นรถ / สี</label>
+            <input type="text" id="reg-model" placeholder="เช่น Honda Wave สีแดง">
+
+            <button class="btn btn-primary" onclick="handleRegister()"
+                style="margin-top: 25px;">เริ่มรับงานทันที</button>
+        </div>
+
+        <div id="rider-dashboard" class="hidden">
+            <div style="padding-top: 10px; margin-bottom: 15px;">
+                <a href="./index.html"
+                    style="display: inline-flex; align-items: center; cursor: pointer; color: #94a3b8; font-size: 0.9rem; text-decoration: none;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                    ย้อนกลับ
+                </a>
+            </div>
+
+            <div id="active-job-section" class="card hidden"
+                style="border: 2px solid var(--primary); background: #f0fdfa; margin-bottom: 25px;">
+                <h2 style="color: var(--secondary); font-size: 1.2rem; margin-bottom: 15px;">🚴 งานที่กำลังดำเนินการ
+                </h2>
+                <div id="active-job-card">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">📦 งานที่รับได้ตอนนี้</h2>
+                <button onclick="loadAvailableJobs()"
+                    style="background: none; border: none; color: var(--primary, #2dd4bf); cursor: pointer; font-size: 1.2rem;">🔄</button>
+            </div>
+
+            <div id="job-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://qjkbtcqjmwwwtqdhgmyu.supabase.co';
+        const supabaseKey = 'sb_publishable_DnNEGxHkiaWXHzYNGQ0luw_oVVR_Bl0';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+
+        // ฟังก์ชันตรวจสอบสถานะความเป็นไรเดอร์
+        async function checkStatus() {
+            try {
+                console.log("Checking rider status...");
+                // ดึงข้อมูล Session ล่าสุดเพื่อตรวจสอบว่ามีการล็อกอินอยู่ในระบบหรือไม่
+                const { data: { session } } = await supabaseClient.auth.getSession();
+
+                // ระบบป้องกัน: หากไม่พบข้อมูลการล็อกอิน ให้ส่งผู้ใช้กลับไปยังหน้าหลัก (index.html) ทันที
+                if (!session || !session.user) {
+                    console.log("No user found, redirecting...");
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // เก็บข้อมูลผู้ใช้งานไว้ในตัวแปร user เพื่อนำไปใช้งานต่อ
+                const user = session.user;
+
+                // ตรวจสอบข้อมูลในตาราง 'riders' เพื่อดูว่า User ID นี้เคยลงทะเบียนเป็นไรเดอร์หรือยัง
+                const { data: rider, error: riderError } = await supabaseClient
+                    .from('riders')
+                    .select('id') // ดึงแค่ ID มาเช็คว่ามีตัวตนไหม
+                    .eq('id', user.id)
+                    .maybeSingle();
+
+                // หากเกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล ให้ส่งไปจัดการที่ส่วน catch
+                if (riderError) throw riderError;
+
+                // เมื่อโหลดข้อมูลพื้นฐานเสร็จแล้ว ให้ซ่อนองค์ประกอบ Loading บนหน้าเว็บ
+                document.getElementById('loading').classList.add('hidden');
+
+                // ตรรกะการแยกหน้าจอแสดงผล (Conditional UI Rendering)
+                if (rider) {
+                    // เป็นไรเดอร์แล้ว -> แสดงหน้า Dashboard
+                    document.getElementById('rider-dashboard').classList.remove('hidden');
+                    // เรียกฟังก์ชันเพื่อโหลดข้อมูลงานที่กำลังทำค้างอยู่
+                    loadActiveJob();
+                    // เรียกฟังก์ชันเพื่อโหลดรายการงานใหม่ที่สามารถกดรับได้
+                    loadAvailableJobs();
+                } else {
+                    // ยังไม่ได้สมัคร -> แสดงฟอร์มลงทะเบียน
+                    document.getElementById('registration-form').classList.remove('hidden');
+                    // เรียกฟังก์ชันดึงข้อมูลโปรไฟล์เดิมมาใส่ในฟอร์มสมัครเพื่อความสะดวก
+                    preFillData(user.id);
+                }
+            } catch (err) {
+                // จัดการข้อผิดพลาดร้ายแรงและแสดงข้อความแจ้งเตือนผู้ใช้งานบนหน้าจอ
+                console.error("Critical Error:", err.message);
+                document.getElementById('loading').innerHTML = "❌ เกิดข้อผิดพลาดในการโหลดข้อมูล: " + err.message;
+            }
+        }
+
+        // ดึงข้อมูลชื่อ/เบอร์โทรจาก profiles มาใส่ในฟอร์มสมัครไรเดอร์
+        async function preFillData(userId) {
+            // ดึงข้อมูลชื่อเต็มและเบอร์โทรศัพท์จากตาราง 'profiles' ตามรหัสผู้ใช้งาน
+            const { data: profile } = await supabaseClient
+                .from('profiles')
+                .select('full_name, phone_number')
+                .eq('id', userId)
+                .maybeSingle();
+
+            // หากพบข้อมูลโปรไฟล์ ให้นำค่าไปใส่ใน Input Field ของฟอร์มสมัครไรเดอร์
+            if (profile) {
+                // นำชื่อมาใส่ในช่องชื่อ (reg-name)
+                document.getElementById('reg-name').value = profile.full_name || '';
+                // นำเบอร์โทรมาใส่ในช่องเบอร์โทร (reg-phone)
+                document.getElementById('reg-phone').value = profile.phone_number || '';
+            }
+        }
+
+        // ฟังก์ชันลงทะเบียนไรเดอร์ 
+        async function handleRegister() {
+            // ดึงข้อมูล User จากระบบ Authentication เพื่อระบุเจ้าของบัญชี
+            const { data: { user } } = await supabaseClient.auth.getUser();
+
+            // ดึงค่าข้อมูลพาหนะจากแบบฟอร์มบนหน้าเว็บ
+            const plate = document.getElementById('reg-plate').value;
+            const model = document.getElementById('reg-model').value;
+
+            // ตรวจสอบความถูกต้องของข้อมูล (Validation)
+            if (!plate || !model) {
+                alert("กรุณากรอกข้อมูลรถของคุณ");
+                return;
+            }
+
+            // เตรียมชุดข้อมูลสำหรับบันทึกลงตาราง 'riders'
+            const riderData = {
+                id: user.id,
+                vehicle_plate: plate,
+                vehicle_model: model
+            };
+
+            // ทำการ Insert ข้อมูลลงในตาราง riders
+            const { error } = await supabaseClient.from('riders').insert([riderData]);
+
+            if (error) {
+                alert("สมัครไม่สำเร็จ: " + error.message);
+            } else {
+                alert("ลงทะเบียนไรเดอร์สำเร็จ!");
+                // รีโหลดหน้าจอเพื่อเปลี่ยนสถานะจาก "หน้าสมัคร" เป็น "หน้า Dashboard ไรเดอร์"
+                location.reload();
+            }
+        }
+
+        // โหลดงานที่ว่างอยู่ (รอไรเดอร์รับ)
+        async function loadAvailableJobs() {
+            console.log("Loading available jobs with 2-hour window...");
+
+            // คำนวณเวลาปัจจุบัน + 2 ชั่วโมง
+            const now = new Date();
+            // กำหนดเวลาสิ้นสุด (2 ชั่วโมงข้างหน้า): นำเวลาปัจจุบันมาบวกเพิ่ม 2 ชั่วโมงในหน่วยมิลลิวินาที
+            const twoHoursLater = new Date(now.getTime() + (2 * 60 * 60 * 1000)).toISOString();
+
+            // ดึงข้อมูลออเดอร์พร้อมข้อมูลที่เกี่ยวข้อง (Relationship Joins)
+            const { data: jobs, error } = await supabaseClient
+                .from('orders')
+                .select(`
+                *,
+                pickup_time,
+                restaurants(name, address),
+                profiles!customer_id(full_name, phone_number, address),
+                order_items(quantity, menus(name))
+            `)
+
+                // เงื่อนไขการกรองงาน
+                .eq('status', 'paid')              // จ่ายเงินแล้ว
+                .is('rider_id', null)             // ยังไม่มีคนรับ
+                .lte('pickup_time', twoHoursLater) // นัดรับต้องน้อยกว่าหรือเท่ากับ (อีก 2 ชั่วโมงข้างหน้า)
+                .gte('pickup_time', now.toISOString()) // และไม่ใช่อดีต (นัดรับต้องไม่ผ่านมาแล้ว)
+                .order('pickup_time', { ascending: true }); // เรียงตามเวลานัดรับที่ใกล้ที่สุด
+
+            if (error) {
+                console.error("Job loading error:", error.message);
+                return;
+            }
+
+            const container = document.getElementById('job-list');
+            container.innerHTML = "";
+
+            // การแสดงผลรายการงานในรูปแบบ UI Card
+            if (jobs && jobs.length > 0) {
+                jobs.forEach(job => {
+                    const customer = job.profiles || {};
+
+                    // สรุปรายการอาหารทั้งหมดให้เป็นข้อความบรรทัดเดียว
+                    const itemsSummary = job.order_items && job.order_items.length > 0
+                        ? job.order_items.map(item => `${item.menus?.name || 'ไม่ทราบชื่อเมนู'} x${item.quantity}`).join(', ')
+                        : "ไม่มีข้อมูลรายการอาหาร";
+
+                    // จัดรูปแบบเวลานัดรับให้แสดงผลแบบภาษาไทย (วว/ดด เวลา น.)
+                    const pickupDisplay = job.pickup_time
+                        ? new Date(job.pickup_time).toLocaleString('th-TH', {
+                            day: 'numeric', month: 'short',
+                            hour: '2-digit', minute: '2-digit'
+                        }) + " น."
+                        : 'ไม่ได้ระบุเวลา';
+                  
+
+                    // สร้าง HTML Card สำหรับงานแต่ละชิ้น
+                    container.innerHTML += `
+                <div class="card job-card" style="border: 1px solid #e2e8f0; padding: 15px; border-radius: 12px; margin-bottom: 15px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <div style="font-weight: bold; color: #2563eb; font-size: 1.1rem;">📍 ร้าน: ${job.restaurants?.name || 'ไม่ทราบชื่อร้าน'}</div>
+                    </div>
+
+                    <div style="background: #eff6ff; color: #1d4ed8; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #bfdbfe; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+                        <span>⏰</span> <b>เวลานัดรับ:</b> ${pickupDisplay}
+                    </div>
+                    
+                    <div style="background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #f59e0b;">
+                        <div style="font-weight: bold; color: #b45309; font-size: 0.85rem; margin-bottom: 4px;">📦 รายการที่ต้องรับ:</div>
+                        <div style="color: #1e293b; font-weight: 500;">${itemsSummary}</div>
+                    </div>
+
+                    <div style="font-size: 0.9rem; color: #1e293b;">
+                        👤 <b>ผู้รับ:</b> ${customer.full_name || 'ไม่ระบุชื่อ'}
+                    </div>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">
+                        🏠 <b>ที่อยู่ส่ง:</b> ${customer.address || 'ไม่มีข้อมูลที่อยู่'}
+                    </div>
+
+                    <button class="btn-accept" onclick="acceptJob('${job.id}')" style="width: 100%; background: #2563eb; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px;">รับงานนี้</button>
+                </div>`;
+                });
+            } else {
+                // กรณีไม่มีงานที่ตรงตามเงื่อนไขเวลา
+                container.innerHTML = "<p style='text-align:center; color:#94a3b8; padding: 20px;'>ยังไม่มีงานใหม่ในขณะนี้</p>";
+            }
+        }
+
+        // ฟังก์ชันการกดรับงาน
+        async function acceptJob(orderId) {
+            // แสดงหน้าต่างยืนยันเพื่อป้องกันการกดรับงานโดยไม่ตั้งใจ
+            if (!confirm("ยืนยันการรับงานนี้?")) return;
+            // ดึงข้อมูลผู้ใช้งานปัจจุบัน (ไรเดอร์) จากระบบ Auth
+            const { data: { user } } = await supabaseClient.auth.getUser();
+
+            // ทำการอัปเดตข้อมูลออเดอร์ในฐานข้อมูล
+            const { error } = await supabaseClient
+                .from('orders')
+                .update({
+                    rider_id: user.id, // บันทึก ID ไรเดอร์ลงในออเดอร์เพื่อแสดงความเป็นเจ้าของงาน
+                    status: 'rider_accepted' // เปลี่ยนสถานะออเดอร์เป็น 'ไรเดอร์รับงานแล้ว'
+                })
+                .eq('id', orderId); // ระบุออเดอร์ที่ต้องการอัปเดตตาม ID
+
+            if (error) alert(error.message);
+            else {
+                alert("รับงานสำเร็จ!");
+
+                // เมื่อรับงานสำเร็จ ให้รีเฟรชข้อมูลหน้าจอใหม่ทั้งส่วนงานที่กำลังทำและงานที่ว่างอยู่
+                loadActiveJob();
+                loadAvailableJobs();
+            }
+        }
+
+        // โหลดงานที่กำลังทำอยู่
+        // ฟังก์ชันนี้จะแสดงเฉพาะงานที่ไรเดอร์คนนี้รับมาแล้วแต่ยังส่งไม่สำเร็จ
+        async function loadActiveJob() {
+            try {
+                // ตรวจสอบ Session ของผู้ใช้งาน
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) return;
+
+                // ดึงข้อมูลออเดอร์ที่ไรเดอร์คนนี้ถือครองอยู่
+                const { data: jobs, error } = await supabaseClient
+                    .from('orders')
+                    .select(`
+                        *, 
+                        pickup_time,
+                        restaurants(name, address, phone_number),
+                        order_items(
+                            quantity,
+                            menus(name)
+                        )
+                    `) // เพิ่ม phone_number ของร้าน และรายการอาหาร
+                    .eq('rider_id', session.user.id) // กรองเฉพาะงานที่ไรเดอร์คนนี้รับมา
+                    .in('status', ['rider_accepted', 'picked_up']) // กรองเฉพาะสถานะ "รับงานแล้ว" หรือ "รับอาหารมาแล้ว"
+                    .order('updated_at', { ascending: false });
+
+                if (error) throw error;
+
+                const activeSection = document.getElementById('active-job-section');
+                const activeCard = document.getElementById('active-job-card');
+
+                if (jobs && jobs.length > 0) {
+                    // แสดงส่วนของงานที่กำลังทำ (Active Section)
+                    activeSection.classList.remove('hidden');
+                    activeCard.innerHTML = jobs.map(job => {
+                        // ตรวจสอบว่าไรเดอร์รับอาหารจากร้านมาหรือยัง
+                        const isPickedUp = job.status === 'picked_up';
+                        // สรุปรายการอาหารที่ไรเดอร์ต้องตรวจสอบความถูกต้องก่อนออกจากร้าน
+                        const itemsSummary = job.order_items && job.order_items.length > 0
+                            ? job.order_items.map(item => `• ${item.menus?.name} x${item.quantity}`).join('<br>')
+                            : "ไม่มีข้อมูลรายการอาหาร";
+
+                        // เตรียมแสดงเวลานัดรับในงานที่รับแล้ว
+                        const pickupDisplay = job.pickup_time
+                            ? new Date(job.pickup_time).toLocaleString('th-TH', {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            }) + " น."
+                            : 'ไม่ได้ระบุเวลา';
+
+                        return `
+                    <div style="background: #f0fdf4; padding: 15px; border-radius: 12px; border: 1px solid #bbf7d0; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between;">
+                            <div style="font-weight: bold; color: #16a34a; font-size: 1.1rem;">🏢 ร้าน: ${job.restaurants?.name}</div>
+                            <div style="color: #16a34a; font-weight: bold;">⏰ นัดรับ: ${pickupDisplay}</div>
+                        </div>
+                        <div style="font-size: 0.9rem; color: #374151; margin-bottom: 4px;">📍 ${job.restaurants?.address}</div>
+                        <div style="font-size: 0.9rem; color: #16a34a; font-weight: bold; margin-bottom: 10px;">
+                            📞 โทร: <a href="tel:${job.restaurants?.phone_number}" style="color: #16a34a; text-decoration: none;">${job.restaurants?.phone_number || 'ไม่ระบุเบอร์'}</a>
+                        </div>
+                        <div style="background: #ffffff; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px dashed #bbf7d0;">
+                            <div style="font-weight: bold; color: #1e293b; font-size: 0.85rem; margin-bottom: 5px;">📦 รายการอาหารที่ต้องตรวจสอบ:</div>
+                            <div style="color: #475569; font-size: 0.95rem; line-height: 1.4;">${itemsSummary}</div>
+                        </div>
+                        <button class="btn" onclick="updateJobProgress('${job.id}', '${isPickedUp ? 'completed' : 'picked_up'}')" style="width: 100%; background: #16a34a; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                            ${isPickedUp ? '🏁 ส่งอาหารเรียบร้อยแล้ว' : '🛍️ ฉันได้รับอาหารแล้ว'}
+                        </button>
+                    </div>`;
+                    }).join('');
+                } else {
+                    // หากไม่มีงานค้างอยู่ ให้ซ่อนส่วน Active Section
+                    activeSection.classList.add('hidden');
+                }
+            } catch (err) {
+                console.error("Error loading active jobs:", err.message);
+            }
+        }
+
+        // อัปเดตสถานะงาน (รับของ -> ส่งเสร็จ)
+        async function updateJobProgress(orderId, nextStatus) {
+            // อัปเดตสถานะออเดอร์ในฐานข้อมูล
+            const { error } = await supabaseClient
+                .from('orders')
+                .update({ status: nextStatus })
+                .eq('id', orderId);
+
+            if (error) alert(error.message);
+            else {
+                // เมื่ออัปเดตสำเร็จ ให้รีเฟรชรายการงานบนหน้าจอใหม่ทั้งหมด
+                loadActiveJob();
+                loadAvailableJobs();
+            }
+        }
+
+        // กำหนดให้ระบบเริ่มต้นทำงานตรวจสอบสถานะผู้ใช้ทันทีเมื่อหน้าเว็บโหลดเสร็จ
+        window.onload = checkStatus;
+    </script>
+</body>
+
+</html>

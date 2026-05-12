@@ -1,0 +1,673 @@
+<!-- <!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appretite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inria+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #84a57f;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: 'Inria Serif', serif;
+        }
+
+        .brand {
+            color: white;
+            font-size: 4.5rem;
+            margin-bottom: 25px;
+            font-weight: 400;
+        }
+
+        .card {
+            background: white;
+            padding: 40px;
+            border-radius: 25px;
+            width: 100%;
+            max-width: 550px;
+            min-height: 350px;
+            position: relative;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 25px;
+            cursor: pointer;
+            font-size: 1.8rem;
+            color: #333;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 14px;
+            margin: 8px 0;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            background: #ffffff;
+            font-family: 'Inria Serif', serif;
+            font-size: 1rem;
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: #333;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .menu-grid {
+            display: grid;
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .menu-item {
+            padding: 20px;
+            border: 2px solid #333;
+            border-radius: 15px;
+            background: white;
+            font-family: 'Inria Serif', serif;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .menu-item:hover {
+            background: #f9f9f9;
+            transform: translateY(-2px);
+        }
+
+        .toggle-text {
+            margin-top: 20px;
+            text-align: center;
+            cursor: pointer;
+            text-decoration: underline;
+            color: #555;
+        }
+
+        .welcome-text {
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1 class="brand">Appretite</h1>
+
+    <div class="card">
+        <div id="login-section">
+            <h2 style="text-align: center; font-weight: 400;">Log In</h2>
+            <input type="email" id="login-email" placeholder="Email">
+            <input type="password" id="login-password" placeholder="Password">
+            <button class="btn-main" onclick="handleLogin()">เข้าสู่ระบบ</button>
+            <p class="toggle-text" onclick="showSignUp()">ยังไม่มีบัญชี? สมัครสมาชิก</p>
+        </div>
+
+        <div id="signup-section" class="hidden">
+            <div class="back-btn" onclick="showLogin()">←</div>
+            <h2 style="text-align: center; font-weight: 400;">Sign Up</h2>
+            <input type="text" id="reg-name" placeholder="ชื่อ-นามสกุล">
+            <input type="email" id="reg-email" placeholder="อีเมล">
+            <input type="password" id="reg-password" placeholder="รหัสผ่าน">
+            <input type="text" id="reg-phone" placeholder="โทรศัพท์">
+            <textarea id="reg-address" placeholder="ที่อยู่" rows="3"></textarea>
+            <button class="btn-main" onclick="handleSignUp()">ยืนยันสมัครสมาชิก</button>
+        </div>
+
+        <div id="portal-section" class="hidden">
+            <div class="welcome-text">ยินดีต้อนรับ คุณ <span id="user-display">...</span></div>
+            <div class="menu-grid">
+                <button class="menu-item" onclick="location.href='customer-order.html'">🍽️ สั่งอาหาร</button>
+                <button class="menu-item" onclick="location.href='restaurant-dashboard.html'">🏪
+                    จัดการร้านอาหาร</button>
+                <button class="menu-item" onclick="location.href='rider-portal.html'">🛵 เป็นไรเดอร์</button>
+            </div>
+            <div style="text-align: center;">
+                <button onclick="handleLogout()"
+                    style="background:none; border:none; cursor:pointer; text-decoration:underline; color:gray; font-family: 'Inria Serif';">ออกจากระบบ</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ใส่ข้อมูลการเชื่อมต่อของคุณที่นี่
+        const SUPABASE_URL = 'https://qjkbtcqjmwwwtqdhgmyu.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_DnNEGxHkiaWXHzYNGQ0luw_oVVR_Bl0';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+
+        // 1. ฟังก์ชันจัดการการแสดงผลหน้าจอ (ทำหน้าที่แค่ โชว์/ซ่อน)
+        supabaseClient.auth.onAuthStateChange(async (event, session) => {
+            const loginSection = document.getElementById('login-section');
+            const signupSection = document.getElementById('signup-section');
+            const portalSection = document.getElementById('portal-section');
+
+            if (session) {
+                // ดึงข้อมูลชื่อมาโชว์ (ถ้าหาไม่เจอให้ขึ้น "ผู้ใช้งาน")
+                const { data: profile } = await supabaseClient
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('id', session.user.id)
+                    .maybeSingle();
+
+                if (profile) {
+                    document.getElementById('user-display').innerText = profile.full_name;
+                    loginSection.classList.add('hidden');
+                    signupSection.classList.add('hidden');
+                    portalSection.classList.remove('hidden');
+                }
+            } else {
+                // ถ้าไม่มี Session ให้กลับไปหน้า Login
+                loginSection.classList.remove('hidden');
+                signupSection.classList.add('hidden');
+                portalSection.classList.add('hidden');
+            }
+        });
+
+        function showSignUp() {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('signup-section').classList.remove('hidden');
+        }
+
+        function showLogin() {
+            document.getElementById('signup-section').classList.add('hidden');
+            document.getElementById('login-section').classList.remove('hidden');
+        }
+
+        // 2. ฟังก์ชัน Login (เช็คละเอียดที่นี่ที่เดียว)
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            if (!email || !password) return alert("กรุณากรอกอีเมลและรหัสผ่าน");
+
+            try {
+                const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                    email,
+                    password
+                });
+
+                if (authError) throw authError;
+
+                // เช็คว่ามี Profile ไหม
+                const { data: profile, error: profError } = await supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', authData.user.id)
+                    .maybeSingle();
+
+                if (!profile) {
+                    alert("ไม่พบข้อมูลสมาชิก! คุณอาจจะยังสมัครไม่สมบูรณ์ โปรดสมัครใหม่อีกครั้ง");
+                    await supabaseClient.auth.signOut(); // ล้าง Session ทิ้ง
+                    showSignUp();
+                    return;
+                }
+
+                alert("เข้าสู่ระบบสำเร็จ!");
+                // หน้าจอจะเปลี่ยนไปเองเพราะ onAuthStateChange จับการ Login ได้
+            } catch (err) {
+                alert("เข้าสู่ระบบไม่สำเร็จ: " + err.message);
+            }
+        }
+
+        // 3. ฟังก์ชันสมัครสมาชิก
+        // 3. ฟังก์ชันสมัครสมาชิก
+        async function handleSignUp() {
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const name = document.getElementById('reg-name').value;
+            const phone = document.getElementById('reg-phone').value;
+            const address = document.getElementById('reg-address').value;
+
+            if (!email || !password || !name) return alert("กรุณากรอกข้อมูลให้ครบ");
+
+            try {
+                // สมัครสมาชิก
+                const { data, error: authError } = await supabaseClient.auth.signUp({ email, password });
+                if (authError) throw authError;
+
+                if (data.user) {
+                    // บันทึกข้อมูลลงตาราง Profiles
+                    const { error: profError } = await supabaseClient.from('profiles').insert([{
+                        id: data.user.id,
+                        full_name: name,
+                        phone_number: phone,
+                        address: address
+                    }]);
+
+                    if (profError) throw profError;
+
+                    // --- จุดที่เพิ่ม: สั่ง Log out ทันทีหลังสมัครเสร็จ เพื่อเคลียร์ Session ---
+                    await supabaseClient.auth.signOut();
+
+                    alert("สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบอีกครั้งเพื่อเข้าใช้งาน");
+                    showLogin(); // สลับไปหน้า Login
+                }
+            } catch (err) {
+                alert("สมัครไม่สำเร็จ: " + err.message);
+            }
+        }
+
+        async function handleLogout() {
+            await supabaseClient.auth.signOut();
+            // ไม่ต้อง reload เดี๋ยว onAuthStateChange จัดการให้เอง
+        }
+    </script>
+</body>
+
+</html> -->
+
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appretite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inria+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #84a57f;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: 'Inria Serif', serif;
+        }
+
+        .brand {
+            color: white;
+            font-size: 4.5rem;
+            margin-bottom: 25px;
+            font-weight: 400;
+        }
+
+        .card {
+            background: white;
+            padding: 40px;
+            border-radius: 25px;
+            width: 100%;
+            max-width: 550px;
+            min-height: 350px;
+            position: relative;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 25px;
+            cursor: pointer;
+            font-size: 1.8rem;
+            color: #333;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 14px;
+            margin: 8px 0;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            background: #ffffff;
+            font-family: 'Inria Serif', serif;
+            font-size: 1rem;
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: #333;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .menu-grid {
+            display: grid;
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .menu-item {
+            padding: 20px;
+            border: 2px solid #333;
+            border-radius: 15px;
+            background: white;
+            font-family: 'Inria Serif', serif;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .menu-item:hover {
+            background: #f9f9f9;
+            transform: translateY(-2px);
+        }
+
+        .toggle-text {
+            margin-top: 20px;
+            text-align: center;
+            cursor: pointer;
+            text-decoration: underline;
+            color: #555;
+        }
+
+        .welcome-text {
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1 class="brand">Appretite</h1>
+
+    <div class="card">
+        <div id="login-section">
+            <h2 style="text-align: center; font-weight: 400;">Log In</h2>
+            <input type="email" id="login-email" placeholder="Email">
+            <input type="password" id="login-password" placeholder="Password">
+            <button class="btn-main" onclick="handleLogin()">เข้าสู่ระบบ</button>
+            <p class="toggle-text" onclick="showSignUp()">ยังไม่มีบัญชี? สมัครสมาชิก</p>
+        </div>
+
+        <div id="signup-section" class="hidden">
+            <div class="back-btn" onclick="showLogin()">←</div>
+            <h2 style="text-align: center; font-weight: 400;">Sign Up</h2>
+            <input type="text" id="reg-name" placeholder="ชื่อ-นามสกุล">
+            <input type="email" id="reg-email" placeholder="อีเมล">
+            <input type="password" id="reg-password" placeholder="รหัสผ่าน">
+            <input type="text" id="reg-phone" placeholder="โทรศัพท์">
+            <textarea id="reg-address" placeholder="ที่อยู่" rows="3"></textarea>
+            <button class="btn-main" onclick="handleSignUp()">ยืนยันสมัครสมาชิก</button>
+        </div>
+
+        <div id="portal-section" class="hidden">
+            <div class="welcome-text">ยินดีต้อนรับ คุณ <span id="user-display">...</span></div>
+            <div class="menu-grid">
+                <button class="menu-item" onclick="location.href='customer-order.html'">🍽️ สั่งอาหาร</button>
+                <button class="menu-item" onclick="location.href='restaurant-manage.html'">🏪 จัดการร้านอาหาร</button>
+                <button class="menu-item" onclick="location.href='rider-portal.html'">🛵 เป็นไรเดอร์</button>
+            </div>
+            <div style="text-align: center;">
+                <button onclick="handleLogout()"
+                    style="background:none; border:none; cursor:pointer; text-decoration:underline; color:gray; font-family: 'Inria Serif';">ออกจากระบบ</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://qjkbtcqjmwwwtqdhgmyu.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_DnNEGxHkiaWXHzYNGQ0luw_oVVR_Bl0';
+
+
+        // การสร้างการเชื่อมต่อกับ Supabase Client พร้อมการตั้งค่าระบบการจัดการ Session
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: {
+                persistSession: true,      // เปิดการใช้งาน LocalStorage เพื่อจดจำการล็อกอินไว้แม้ปิดเบราว์เซอร์
+                autoRefreshToken: true,    // ตั้งค่าให้ระบบทำการต่ออายุ Token โดยอัตโนมัติเพื่อคงสถานะการล็อกอิน
+                detectSessionInUrl: true   // ตรวจสอบการรับข้อมูล Session จาก URL (ใช้สำหรับการล็อกอินผ่านอีเมลหรือ OAuth)
+            }
+        });
+
+        // ฟังก์ชันสำหรับควบคุมการแสดงผลบนหน้าจอ (UI Management) โดยจะเปลี่ยนไปตามสถานะของผู้ใช้
+        async function updateUI(session) {
+            const loginSection = document.getElementById('login-section');
+            const signupSection = document.getElementById('signup-section');
+            const portalSection = document.getElementById('portal-section');
+
+            if (session) {
+                // กรณีมี Session (ล็อกอินอยู่): ให้ไปดึงข้อมูลชื่อจากตาราง 'profiles'
+                const { data: profile } = await supabaseClient
+                    .from('profiles')
+                    .select('full_name')           // เลือกดึงเฉพาะชื่อเต็ม
+                    .eq('id', session.user.id)     // กรองด้วย User ID ปัจจุบัน
+                    .maybeSingle();                // รับผลลัพธ์เป็นวัตถุเดียว (ถ้ามี)
+
+                // เมื่อพบข้อมูลโปรไฟล์ ให้ทำการเปลี่ยนหน้าจอ
+                if (profile) {
+                    // แสดงชื่อผู้ใช้บนหน้าจอ
+                    document.getElementById('user-display').innerText = profile.full_name;
+                    // ซ่อนหน้าล็อกอินและสมัครสมาชิก
+                    loginSection.classList.add('hidden');
+                    signupSection.classList.add('hidden');
+                    // แสดงหน้า Portal สำหรับเข้าสู่ฟังก์ชันต่างๆ ของแอปฯ
+                    portalSection.classList.remove('hidden');
+                }
+                // กรณีไม่มี Session (ยังไม่ได้ล็อกอิน) ให้แสดงเฉพาะหน้าล็อกอินหลัก
+            } else {
+                loginSection.classList.remove('hidden');
+                signupSection.classList.add('hidden');
+                portalSection.classList.add('hidden');
+            }
+        }
+
+        // ตรวจสอบสถานะการล็อกอิน (Session) ทันทีที่มีการโหลดหน้าเว็บ
+        // ป้องกันปัญหาหน้าว่างเมื่อผู้ใช้กดปุ่ม Back/Forward หรือ Refresh หน้าจอ
+        window.addEventListener('load', async () => {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            updateUI(session); // ส่งข้อมูล Session ไปจัดการหน้าจอ
+        });
+
+        // ตั้งค่า Event Listener เพื่อคอยตรวจจับเมื่อสถานะการล็อกอินมีการเปลี่ยนแปลง
+        // เช่น เมื่อกด Login สำเร็จ หรือเมื่อผู้ใช้กด Logout
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            updateUI(session); // ปรับเปลี่ยนหน้าจอตามข้อมูล Session ล่าสุด
+        });
+
+        // ฟังก์ชันสำหรับสลับหน้าจอการใช้งาน (Client-side Navigation)
+        // ฟังก์ชันสำหรับสลับไปแสดงหน้าสมัครสมาชิก (Signup)
+        function showSignUp() {
+            // ซ่อนส่วนของการเข้าสู่ระบบ และแสดงส่วนของการสมัครสมาชิกแทน
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('signup-section').classList.remove('hidden');
+        }
+
+        // ฟังก์ชันสำหรับสลับกลับไปแสดงหน้าเข้าสู่ระบบ (Login)
+        function showLogin() {
+            // ซ่อนส่วนของการสมัครสมาชิก และแสดงส่วนของการเข้าสู่ระบบแทน
+            document.getElementById('signup-section').classList.add('hidden');
+            document.getElementById('login-section').classList.remove('hidden');
+        }
+
+        // ฟังก์ชันจัดการการเข้าสู่ระบบ (Authentication Logic)
+        async function handleLogin() {
+            // ดึงค่าอีเมลและรหัสผ่านจาก Input field ที่ผู้ใช้กรอก
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            // ตรวจสอบความสมบูรณ์ของข้อมูลเบื้องต้น (Validation)
+            if (!email || !password) return alert("กรุณากรอกข้อมูลให้ครบ");
+
+            // ส่งคำขอเข้าสู่ระบบไปยัง Supabase Auth ด้วยอีเมลและรหัสผ่าน
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                // หากเกิดข้อผิดพลาดจากการตรวจสอบบัญชี (เช่น รหัสผ่านผิด) ให้แจ้งเตือนผู้ใช้
+                alert("เข้าสู่ระบบไม่สำเร็จ: " + error.message);
+            } else {
+                // กรณีตรวจสอบบัญชีผ่าน: ให้ตรวจสอบต่อว่าผู้ใช้งานรายนี้มีข้อมูลในตาราง 'profiles' หรือไม่
+                // (เป็นการทำ Data Integrity Check เพื่อป้องกันบัญชีที่ค้างในระบบ Auth แต่ไม่มีข้อมูลโปรไฟล์)
+                const { data: profile } = await supabaseClient
+                    .from('profiles')
+                    .select('id')
+                    .eq('id', data.user.id)
+                    .maybeSingle();
+
+                if (!profile) {
+                    // หากไม่พบข้อมูลในตาราง profiles: แจ้งเตือนและทำการ Logout ออกทันที
+                    alert("ไม่พบข้อมูลโปรไฟล์! กำลังส่งคุณไปหน้าสมัครสมาชิก");
+                    await supabaseClient.auth.signOut();
+                    showSignUp(); // ส่งไปหน้าสมัครสมาชิกแทน
+                }
+                // หากพบข้อมูลโปรไฟล์ ระบบจะทำงานต่อไปยังส่วน onAuthStateChange ที่ตั้งค่าไว้โดยอัตโนมัติ
+            }
+        }
+
+        // ฟังก์ชันสมัครสมาชิก (Signup Logic) 
+        // ออกแบบมาเพื่อป้องกันปัญหาบัญชีค้างในระบบ Auth แต่ไม่มีข้อมูลในฐานข้อมูล
+        // async function handleSignUp() {
+        //     // ดึงค่าข้อมูลต่างๆ จากแบบฟอร์มการสมัครสมาชิก
+        //     const email = document.getElementById('reg-email').value;
+        //     const password = document.getElementById('reg-password').value;
+        //     const name = document.getElementById('reg-name').value;
+        //     const phone = document.getElementById('reg-phone').value;
+        //     const address = document.getElementById('reg-address').value;
+
+        //     // ตรวจสอบความสมบูรณ์ของข้อมูลที่จำเป็น (Validation)
+        //     if (!email || !password || !name) return alert("กรุณากรอกข้อมูลสำคัญให้ครบ");
+
+        //     try {
+        //         // ส่งคำขอสร้างบัญชีผู้ใช้ใหม่ไปยังระบบ Supabase Auth
+        //         const { data, error: authError } = await supabaseClient.auth.signUp({ email, password });
+
+        //         // ตรวจสอบ Error: กรณีที่อีเมลนี้อาจเคยสมัครไว้แล้วแต่ยังไม่มีโปรไฟล์ในฐานข้อมูล
+        //         // เราจะไม่หยุดการทำงาน แต่จะดึง User เดิมมาเพื่อสร้างโปรไฟล์ให้สมบูรณ์
+        //         if (authError && authError.message !== 'User already registered') {
+        //             return alert("สมัครไม่สำเร็จ: " + authError.message);
+        //         }
+
+        //         // ดึงข้อมูล User Object จากการสมัครใหม่ หรือดึงจาก Session ปัจจุบัน
+        //         const user = data.user || (await supabaseClient.auth.getUser()).data.user;
+
+        //         if (user) {
+        //             // ทำการบันทึกหรืออัปเดต (Upsert) ข้อมูลลงในตาราง 'profiles'
+        //             const { error: profError } = await supabaseClient
+        //                 .from('profiles')
+        //                 .upsert([{
+        //                     id: user.id, // ใช้ ID เดียวกับระบบ Auth (Shared Primary Key)
+        //                     full_name: name,
+        //                     phone_number: phone,
+        //                     address: address
+        //                 }]);
+
+        //             if (profError) {
+        //                 // หากบันทึกลงฐานข้อมูลไม่สำเร็จ แจ้งเตือนผู้ใช้
+        //                 alert("บันทึกโปรไฟล์ล้มเหลว: " + profError.message);
+        //             } else {
+        //                 // หากสำเร็จ: แจ้งให้ผู้ใช้ทราบ และทำการออกจากระบบ (Logout) ทันที
+        //                 // เพื่อให้ผู้ใช้ได้ทำการล็อกอินใหม่เพื่อรีเฟรช Token และสิทธิ์การเข้าถึงข้อมูล
+        //                 alert("สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบอีกครั้ง");
+        //                 await supabaseClient.auth.signOut();
+        //                 // สลับกลับไปหน้าจอเข้าสู่ระบบ
+        //                 showLogin();
+        //             }
+        //         }
+        //     } catch (err) {
+        //         // จัดการข้อผิดพลาดที่ไม่คาดคิดในกระบวนการสมัครสมาชิก
+        //         alert("เกิดข้อผิดพลาด: " + err.message);
+        //     }
+        // }
+
+        async function handleSignUp() {
+            // ดึงค่าข้อมูลต่างๆ จากแบบฟอร์มการสมัครสมาชิก
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const name = document.getElementById('reg-name').value;
+            const phone = document.getElementById('reg-phone').value;
+            const address = document.getElementById('reg-address').value;
+
+            // ตรวจสอบความสมบูรณ์ของข้อมูลที่จำเป็น (Validation)
+            if (!email || !password || !name) return alert("กรุณากรอกข้อมูลสำคัญให้ครบ");
+
+            try {
+                // ส่งคำขอสร้างบัญชีผู้ใช้ใหม่ไปยังระบบ Supabase Auth
+                const { data, error: authError } = await supabaseClient.auth.signUp({ email, password });
+
+                // ตรวจสอบ Error: กรณีที่อีเมลนี้อาจเคยสมัครไว้แล้วแต่ยังไม่มีโปรไฟล์ในฐานข้อมูล
+                // เราจะไม่หยุดการทำงาน แต่จะดึง User เดิมมาเพื่อสร้างโปรไฟล์ให้สมบูรณ์
+                if (authError && authError.message !== 'User already registered') {
+                    return alert("สมัครไม่สำเร็จ: " + authError.message);
+                }
+
+                // ดึงข้อมูล User Object จากการสมัครใหม่ หรือดึงจาก Session ปัจจุบัน
+                const user = data.user || (await supabaseClient.auth.getUser()).data.user;
+
+                if (user) {
+                    // ทำการบันทึกหรืออัปเดต (Upsert) ข้อมูลลงในตาราง 'profiles'
+                    const { error: profError } = await supabaseClient
+                        .from('profiles')
+                        .upsert([{
+                            id: user.id, // ใช้ ID เดียวกับระบบ Auth (Shared Primary Key)
+                            full_name: name,
+                            phone_number: phone,
+                            address: address
+                        }]);
+
+                    if (profError) {
+                        // หากบันทึกลงฐานข้อมูลไม่สำเร็จ แจ้งเตือนผู้ใช้
+                        alert("บันทึกโปรไฟล์ล้มเหลว: " + profError.message);
+                    } else {
+                        // หากสำเร็จแจ้งให้ผู้ใช้ทราบ
+                        // เพื่อให้ผู้ใช้ได้ทำการล็อกอินใหม่เพื่อรีเฟรช Token และสิทธิ์การเข้าถึงข้อมูล
+                        alert("สมัครสมาชิกสำเร็จ! กรุณาเช็คอีเมลของคุณเพื่อยืนยันตัวตน");
+                        // สลับกลับไปหน้าจอเข้าสู่ระบบ
+                        showLogin();
+                    }
+                }
+            } catch (err) {
+                // จัดการข้อผิดพลาดที่ไม่คาดคิดในกระบวนการสมัครสมาชิก
+                alert("เกิดข้อผิดพลาด: " + err.message);
+            }
+        }
+
+
+        // ฟังก์ชันออกจากระบบ
+        async function handleLogout() {
+            // เรียกคำสั่ง signOut จาก Supabase เพื่อล้าง Session ในเบราว์เซอร์และเซิร์ฟเวอร์
+            await supabaseClient.auth.signOut();
+            // เมื่อสถานะเปลี่ยน onAuthStateChange จะทำงานและซ่อนหน้า Portal โดยอัตโนมัติ
+        }
+    </script>
+</body>
+
+</html>

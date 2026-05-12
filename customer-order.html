@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สั่งอาหาร - Appretite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inria+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background-color: #84a57f;
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inria Serif', serif;
+            color: #333;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            cursor: pointer;
+            font-size: 2rem;
+            text-decoration: none;
+            color: white;
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .brand-header {
+            text-align: center;
+            color: white;
+            font-size: 3.5rem;
+            margin-top: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 25px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            min-height: 600px;
+        }
+
+        /* สไตล์หน้าเลือกร้าน */
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .shop-card {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #84a57f;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .shop-card:hover {
+            transform: translateY(-5px);
+            background: #f0f4ef;
+        }
+
+        /* สไตล์หน้าเลือกเมนู */
+        .menu-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+
+        .order-footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+
+        .btn-confirm {
+            width: 100%;
+            background: #333;
+            color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* --- เพิ่มเติมต่อจากเดิมในส่วน <style> --- */
+
+        /* ส่วนควบคุมปุ่มบวกลบ (Quantity Control) */
+        .qty-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            /* ระยะห่างระหว่างปุ่มกับตัวเลข */
+            background: #f0f0f0;
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+
+        .btn-qty {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid #333;
+            background: white;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            line-height: 0;
+            padding-bottom: 3px;
+            /* ปรับตำแหน่งเครื่องหมายให้อยู่กลางปุ่ม */
+        }
+
+        .btn-qty:hover {
+            background: #333;
+            color: white;
+        }
+
+        .qty-num {
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        /* ส่วนแสดงราคารวม (Total Display) */
+        .total-display {
+            font-size: 1.6rem;
+            text-align: right;
+            margin: 25px 0;
+            color: #333;
+            font-weight: bold;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 12px;
+            border-right: 8px solid #84a57f;
+        }
+
+        #total-amount {
+            color: #84a57f;
+            /* ให้ตัวเลขราคาเป็นสีเขียวเน้นๆ */
+        }
+
+
+        .menu-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 10px;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+
+<body>
+
+    <a href="index.html" class="back-btn">←</a>
+    <h1 class="brand-header">Appretite</h1>
+
+    <div class="container">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+            <a href="my-orders.html" style="
+        background-color: #84a57f;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 25px;
+        text-decoration: none;
+        font-weight: bold;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    ">
+                <span>📋 ออเดอร์ของฉัน</span>
+            </a>
+        </div>
+        <div id="shop-selection-section">
+            <h2 style="text-align:center;">เลือกร้านอาหารที่ต้องการสั่ง</h2>
+            <div id="shop-list" class="shop-grid">
+                <p style="text-align:center; grid-column: 1/-1;">กำลังโหลดรายชื่อร้าน...</p>
+            </div>
+        </div>
+
+        <div id="menu-selection-section" class="hidden">
+            <button onclick="showShops()"
+                style="background:none; border:none; text-decoration:underline; cursor:pointer; font-family:'Inria Serif'; margin-bottom:20px;">«
+                กลับไปหน้าร้านค้า</button>
+            <h2 id="selected-shop-name">ชื่อร้าน</h2>
+            <p id="selected-shop-lead" style="color: #666;"></p>
+            <hr>
+            <div id="menu-list">
+            </div>
+
+            <div class="order-footer">
+                <label><b>เลือกวันและเวลานัดรับ:</b></label>
+                <input type="datetime-local" id="pickup-time"
+                    style="width:100%; padding:12px; margin:10px 0; border-radius:10px; border:1px solid #ddd; font-family:'Inria Serif';">
+                <button class="btn-confirm" onclick="handlePlaceOrder()">ยืนยันออเดอร์</button>
+            </div>
+            <div class="total-display">
+                ราคารวมทั้งหมด: <span id="total-amount">0</span> บาท
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://qjkbtcqjmwwwtqdhgmyu.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_DnNEGxHkiaWXHzYNGQ0luw_oVVR_Bl0';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let selectedShopId = null; // เก็บไอดีของร้านค้าที่ผู้ใช้เลือก
+        let selectedShopLeadTime = 0; // เก็บเวลาล่วงหน้าที่ร้านต้องการ (Lead Time) เพื่อใช้ตรวจสอบตอนนัดรับ
+
+        // ฟังก์ชันสำหรับโหลดรายการร้านค้าทั้งหมดจากฐานข้อมูลมาให้ลูกค้าเลือก
+        async function loadShops() {
+            // ดึงข้อมูลร้านค้าทั้งหมดจากตาราง 'restaurants'
+            const { data: shops, error } = await supabaseClient.from('restaurants').select('*');
+            const shopList = document.getElementById('shop-list');
+
+            if (shops && shops.length > 0) {
+
+                // วนลูปสร้าง Card ร้านค้า โดยเมื่อคลิกจะเรียกฟังก์ชัน selectShop
+                shopList.innerHTML = shops.map(shop => `
+                    <div class="shop-card" onclick="selectShop('${shop.id}', '${shop.name}', ${shop.lead_time_hours})">
+                        <h3 style="margin:0 0 10px 0;">${shop.name}</h3>
+                        <p style="font-size:0.9rem; color:#666; margin:5px 0;">📍 ${shop.address}</p>
+                        <p style="font-size:0.8rem;">⏳ ต้องสั่งล่วงหน้า ${shop.lead_time_hours} ชม.</p>
+                    </div>
+                `).join('');
+            } else {
+                shopList.innerHTML = '<p>ยังไม่มีร้านอาหารในระบบ</p>';
+            }
+        }
+
+        // ฟังก์ชันเมื่อลูกค้ากดเลือกร้านค้า
+        async function selectShop(id, name, leadTime) {
+            selectedShopId = id; // บันทึก ID ร้านที่เลือกไว้
+            selectedShopLeadTime = leadTime; // บันทึก Lead Time ของร้าน
+
+            // อัปเดตชื่อร้านและเงื่อนไขเวลาบน UI   
+            document.getElementById('selected-shop-name').innerText = name;
+            document.getElementById('selected-shop-lead').innerText = `ร้านนี้ต้องการเวลาเตรียมตัวล่วงหน้าอย่างน้อย ${leadTime} ชั่วโมง`;
+
+            // สลับหน้าจอจากการเลือกร้าน ไปยังหน้าเลือกเมนูอาหาร
+            document.getElementById('shop-selection-section').classList.add('hidden');
+            document.getElementById('menu-selection-section').classList.remove('hidden');
+
+            // โหลดเมนูของร้านนี้
+            const { data: menus } = await supabaseClient
+                .from('menus')
+                .select('*')
+                .eq('restaurant_id', id)
+                .eq('is_active', true); // กรองเฉพาะเมนูที่ร้านยังเปิดขายอยู่
+
+            const menuList = document.getElementById('menu-list');
+
+            if (menus && menus.length > 0) {
+                // สร้างรายการเมนูพร้อมปุ่มบวก-ลบจำนวน (Qty Control)
+                menuList.innerHTML = menus.map(m => `
+            <div class="menu-item">
+                <div>
+                    <b>${m.name}</b><br>
+                    <span style="color:#84a57f; font-weight:bold;">${m.price}.-</span>
+                </div>
+                <div class="qty-control">
+                    <button class="btn-qty" onclick="updateQty('${m.id}', -1, ${m.price})">−</button>
+                    <span id="qty-${m.id}" class="qty-num" data-price="${m.price}">0</span>
+                    <button class="btn-qty" onclick="updateQty('${m.id}', 1, ${m.price})">+</button>
+                </div>
+            </div>
+        `).join('');
+            } else {
+                menuList.innerHTML = '<p style="text-align:center; padding:20px;">ร้านนี้ยังไม่ได้ลงเมนูอาหาร</p>';
+            }
+
+            // รีเซ็ตราคารวมเป็น 0 ทุกครั้งที่เปลี่ยนร้าน
+            calculateTotal();
+        }
+
+        // ฟังก์ชันสำหรับกดปุ่มบวก-ลบ
+        function updateQty(menuId, change, price) {
+            const qtyElement = document.getElementById(`qty-${menuId}`);
+            let currentQty = parseInt(qtyElement.innerText);
+
+            currentQty += change; // ปรับเปลี่ยนจำนวนตามที่กด (+1 หรือ -1)
+            if (currentQty < 0) currentQty = 0; // ป้องกันค่าติดลบ
+
+            qtyElement.innerText = currentQty; // อัปเดตตัวเลขจำนวนบนหน้าจอ
+            calculateTotal(); // คำนวณราคารวมใหม่ทันที
+        }
+
+        // ฟังก์ชันคำนวณราคารวมทั้งหมด
+        function calculateTotal() {
+            let total = 0;
+            // ดึง Element ของตัวเลขจำนวนเมนูทั้งหมดที่มีคลาส 'qty-num'
+            const qtyElements = document.querySelectorAll('.qty-num');
+
+            qtyElements.forEach(el => {
+                const qty = parseInt(el.innerText); // จำนวนที่สั่ง
+                const price = parseFloat(el.getAttribute('data-price')); // ราคาต่อชิ้นที่เก็บไว้ใน attribute
+                total += qty * price; // สูตร :ผลรวมของ (จำนวน * ราคา)
+            });
+
+            // แสดงผลราคารวมในหน้าเว็บพร้อมจัดรูปแบบตัวเลข (toLocaleString)
+            const totalAmountEl = document.getElementById('total-amount');
+            if (totalAmountEl) {
+                totalAmountEl.innerText = total.toLocaleString();
+            }
+        }
+
+        // ฟังก์ชันสำหรับกดปุ่ม "ย้อนกลับ" เพื่อไปหน้ารายชื่อร้านค้า
+        function showShops() {
+            document.getElementById('shop-selection-section').classList.remove('hidden'); // แสดงหน้าเลือกร้าน
+            document.getElementById('menu-selection-section').classList.add('hidden'); // ซ่อนหน้าแสดงเมนู
+        }
+
+        // ฟังก์ชันดำเนินการสั่งซื้อ
+        async function handlePlaceOrder() {
+            // ตรวจสอบความปลอดภัย: ดึง Session เพื่อยืนยันว่าผู้ใช้งานล็อกอินอยู่
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) return alert("กรุณาเข้าสู่ระบบก่อนสั่งอาหาร");
+
+            // ตรวจสอบค่าเวลาที่ลูกค้านัดรับสินค้า
+            const pickupVal = document.getElementById('pickup-time').value;
+            if (!pickupVal) return alert("กรุณาเลือกเวลานัดรับ");
+
+            // ตรวจสอบ Lead Time
+            const pickupTime = new Date(pickupVal); // เวลาที่ลูกค้านัดรับ
+            const now = new Date(); // เวลาปัจจุบันที่กดยืนยันสั่ง
+            // คำนวณส่วนต่างเวลาเป็นชั่วโมง (มิลลิวินาที -> วินาที -> นาที -> ชั่วโมง)
+            const hoursDiff = (pickupTime - now) / (1000 * 60 * 60);
+
+            // ตรวจสอบว่าเวลาที่นัดรับ สอดคล้องกับข้อกำหนดการเตรียมอาหารของร้านหรือไม่
+            if (hoursDiff < selectedShopLeadTime) {
+                return alert(`ไม่สามารถสั่งได้! ร้านนี้ต้องสั่งล่วงหน้าอย่างน้อย ${selectedShopLeadTime} ชั่วโมง (คุณสั่งล่วงหน้าเพียง ${hoursDiff.toFixed(1)} ชม.)`);
+            }
+
+            // รวบรวมเมนูที่สั่ง
+            // ดึง Element ของตัวเลขจำนวนสินค้าทั้งหมดที่มีคลาส '.qty-num'
+            const qtyElements = document.querySelectorAll('.qty-num'); // เปลี่ยนจาก .qty-input เป็น .qty-num
+            const items = [];
+
+            qtyElements.forEach(el => {
+                const qty = parseInt(el.innerText); // อ่านจำนวนจานที่สั่งจากหน้าจ
+                if (qty > 0) {
+                    // หากมีการสั่ง (มากกว่า 0) ให้เก็บข้อมูลใส่ Array
+                    items.push({
+                        // ดึง ID เมนูอาหาร โดยการตัดคำว่า 'qty-' ออกจากไอดีของ Element
+                        menu_id: el.id.replace('qty-', ''), 
+                        quantity: qty
+                    });
+                }
+            });
+
+            if (items.length === 0) return alert("กรุณาเลือกอย่างน้อย 1 เมนู");
+
+            // บันทึกข้อมูลลงตารางหลัก 'orders'
+            const { data: order, error: orderErr } = await supabaseClient.from('orders').insert([{
+                restaurant_id: selectedShopId, // เชื่อมกับร้านที่เลือก
+                customer_id: session.user.id, // เชื่อมกับลูกค้าที่ล็อกอินอยู่
+                status: 'pending_admin', // กำหนดสถานะเริ่มต้นเป็นรอตรวจสอบ
+                pickup_time: pickupTime.toISOString(), // แปลงรูปแบบเวลาให้เป็นมาตรฐานฐานข้อมูล
+                is_read: false // ตั้งค่าเริ่มต้นให้ร้านค้าเห็นเป็นออเดอร์ใหม่ (ยังไม่ได้อ่าน)
+            }]).select(); // ใช้ .select() เพื่อเอา ID ของออเดอร์ที่สร้างใหม่กลับมาใช้ต่อ
+
+            if (orderErr) return alert(orderErr.message);
+
+            // บันทึกลงตาราง order_items
+            const orderId = order[0].id; // ดึง ID ของออเดอร์
+            // นำ ID ออเดอร์มาผูกกับรายการอาหารทุกชิ้นที่ส่งมา
+            const itemsToInsert = items.map(item => ({ ...item, order_id: orderId }));
+
+            // บันทึกรายการอาหารทั้งหมดลงในฐานข้อมูลแบบ Bulk Insert
+            const { error: itemsErr } = await supabaseClient.from('order_items').insert(itemsToInsert);
+
+            if (itemsErr) alert(itemsErr.message);
+            else {
+                // แจ้งเตือนเมื่อกระบวนการทั้งหมดสำเร็จสมบูรณ์
+                alert("สั่งอาหารสำเร็จแล้ว!");
+                // ส่งผู้ใช้ไปยังหน้าประวัติการสั่งซื้อเพื่อรอติดตามสถานะ
+                window.location.href = 'my-orders.html'; // ส่งลูกค้าไปดูสถานะทันที
+            }
+        }
+
+        // เรียกใช้ฟังก์ชันโหลดรายชื่อร้านค้าทันทีที่หน้าเว็บพร้อมทำงาน
+        loadShops();
+    </script>
+</body>
+
+</html>
